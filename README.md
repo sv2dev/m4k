@@ -1,4 +1,4 @@
-# media-optimizer
+# media-processor
 
 To install dependencies:
 

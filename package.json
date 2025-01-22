@@ -1,5 +1,5 @@
 {
-  "name": "media-optimizer",
+  "name": "media-processor",
   "module": "index.ts",
   "type": "module",
   "devDependencies": {
