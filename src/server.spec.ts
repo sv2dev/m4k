@@ -1,29 +1,38 @@
-import type { Server } from "bun";
-import { afterAll, beforeAll, describe, it } from "bun:test";
-import { startServer } from "./server";
-
-let server: Server;
-
-beforeAll(async () => {
-  server = await startServer();
-});
-
-afterAll(async () => {
-  await server.stop();
-});
+import { describe, expect, it } from "bun:test";
+import { testClient } from "hono/testing";
+import { app } from "./server";
 
 describe("server", () => {
-  it("should process image", async () => {
-    const data = new FormData();
-    data.append("file", Bun.file("fixtures/image.jpeg"));
-    const response = await fetch(
-      "http://localhost:3000/optimize?w=100&h=1000&f=avif",
-      {
-        method: "POST",
-        body: data,
-      }
-    );
+  const client = testClient(app);
 
-    Bun.write(Bun.file(".tmp/test/image.avif"), response);
+  it("should process image", async () => {
+    const response = await client.process.$post({
+      form: {
+        file: Bun.file("fixtures/image.jpeg"),
+      },
+      query: {
+        w: 100,
+        h: 1000,
+        f: "webp",
+      },
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("image/webp");
+    const blob = await response.blob();
+
+    expect(blob.size).toBe(312);
+  });
+
+  it("should return 500 if image cannot be processed", async () => {
+    const response = await client.process.$post({
+      form: {
+        file: Bun.file("fixtures/image.jpeg"),
+      },
+      query: { f: "x" },
+    });
+
+    expect(response.status).toBe(500);
+    expect(await response.text()).toBe("Error during image processing");
   });
 });
