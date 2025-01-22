@@ -7,6 +7,7 @@
     "build": "bun build ./index.ts --outdir dist --target bun"
   },
   "devDependencies": {
+    "@sinclair/typebox": "^0.34.14",
     "@types/bun": "latest",
     "hono": "^4.6.17"
   },

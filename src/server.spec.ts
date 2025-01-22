@@ -6,33 +6,32 @@ describe("server", () => {
   const client = testClient(app);
 
   it("should process image", async () => {
-    const response = await client.process.$post({
-      form: {
-        file: Bun.file("fixtures/image.jpeg"),
-      },
-      query: {
-        w: 100,
-        h: 1000,
-        f: "webp",
-      },
+    const response = await client.images.process.$post({
+      form: { file: Bun.file("fixtures/image.jpeg") },
+      query: { width: "100", height: "1000" },
     });
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("content-type")).toBe("image/webp");
+    expect(response.headers.get("content-type")).toBe("image/avif");
     const blob = await response.blob();
 
-    expect(blob.size).toBe(312);
+    expect(blob.size).toBe(500);
   });
 
-  it("should return 500 if image cannot be processed", async () => {
-    const response = await client.process.$post({
-      form: {
-        file: Bun.file("fixtures/image.jpeg"),
-      },
-      query: { f: "x" },
+  it("should return 400 if format is invalid", async () => {
+    const response = await client.images.process.$post({
+      form: { file: Bun.file("fixtures/image.jpeg") },
+      query: { format: "x" as any },
     });
 
-    expect(response.status).toBe(500);
-    expect(await response.text()).toBe("Error during image processing");
+    expect(response.status).toBe(400);
+    const {
+      errors: [error],
+    } = (await response.json()) as any;
+    expect(error).toMatchObject({
+      path: "/format",
+      value: "x",
+      message: "Expected union value",
+    });
   });
 });
