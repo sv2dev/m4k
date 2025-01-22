@@ -40,6 +40,8 @@ export async function startServer() {
     },
   } as ServeOptions);
 
+  console.log(`Server is running on http://${server.hostname}:${server.port}`);
+
   return server;
 }
 
