@@ -5,7 +5,7 @@ on:
     branches:
       - main
 env:
-  IMAGE_NAME: home-photos
+  IMAGE_NAME: media-processor
 jobs:
   check-version:
     name: Check if version changed
