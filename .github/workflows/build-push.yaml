@@ -10,22 +10,34 @@ jobs:
   check-version:
     name: Check if version changed
     runs-on: ubuntu-latest
+    permissions:
+      packages: read
     outputs:
       version-changed: ${{ steps.check.outputs.changed }}
       version: ${{ steps.check.outputs.version }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-      - name: Check if package.json version changed
+      - name: Check if package version exists
         id: check
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Get current version from package.json
           CURRENT_VERSION=$(jq -r .version package.json)
-          git checkout HEAD^
-          PREVIOUS_VERSION=$(jq -r .version package.json)
+          PACKAGE_NAME=$(jq -r .name package.json)
 
-          changed=$([ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ] && echo "true" || echo "false")
+          # Configure npm to use GitHub registry
+          echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> ~/.npmrc
+          echo "@${{ github.repository_owner }}:registry=https://npm.pkg.github.com" >> ~/.npmrc
+
+          # Check if version already exists in registry
+          if npm view "@${{ github.repository_owner }}/$PACKAGE_NAME@$CURRENT_VERSION" version &> /dev/null; then
+            changed="false"
+          else
+            changed="true"
+          fi
+
           echo "changed=$changed" >> "$GITHUB_OUTPUT"
           echo "version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
 
