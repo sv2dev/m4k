@@ -6,32 +6,52 @@ export type Format = (typeof formats)[number];
 export type Fit = (typeof fits)[number];
 
 export function createImageOptimizer({
-  width,
-  height,
-  fit = "inside",
+  rotate,
+  resize,
   format = "avif",
   quality,
   keepMetadata = false,
   keepExif = false,
   keepIcc = false,
   colorspace,
+  crop,
 }: {
-  width?: number;
-  height?: number;
-  fit?: Fit;
+  rotate?: number;
+  resize?: {
+    width?: number;
+    height?: number;
+    fit?: Fit;
+  };
   format?: Format;
   quality?: number;
   keepMetadata?: boolean;
   keepExif?: boolean;
   keepIcc?: boolean;
   colorspace?: string;
+  crop?: {
+    left?: number;
+    top?: number;
+    width: number;
+    height: number;
+  };
 }) {
-  let processImage = sharp()
-    .resize({ width, height, fit })
-    .toFormat(format, { quality });
+  let processImage = sharp().rotate(rotate);
+  if (resize)
+    processImage = processImage.resize({
+      ...resize,
+      fit: resize.fit ?? "inside",
+    });
   if (keepMetadata) processImage = processImage.keepMetadata();
   if (keepExif) processImage = processImage.keepExif();
   if (keepIcc) processImage = processImage.keepIccProfile();
   if (colorspace) processImage = processImage.toColorspace(colorspace);
-  return processImage;
+  if (crop) {
+    processImage = processImage.extract({
+      ...crop,
+      left: crop.left!,
+      top: crop.top!,
+    });
+  }
+  if (format) processImage = processImage.toFormat(format, { quality });
+  return processImage.toFormat(format, { quality });
 }

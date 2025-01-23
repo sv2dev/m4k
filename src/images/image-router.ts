@@ -13,15 +13,20 @@ import {
 } from "./image-optimizer";
 
 const querySchema = T.Object({
+  rotate: T.Optional(numberQueryParamSchema),
   width: T.Optional(numberQueryParamSchema),
   height: T.Optional(numberQueryParamSchema),
+  fit: T.Optional(T.Union(fits.map((fit) => T.Literal(fit)))),
   format: T.Optional(T.Union(formats.map((format) => T.Literal(format)))),
   quality: T.Optional(numberQueryParamSchema),
   keepMetadata: T.Optional(T.Boolean()),
   keepExif: T.Optional(T.Boolean()),
   keepIcc: T.Optional(T.Boolean()),
-  fit: T.Optional(T.Union(fits.map((fit) => T.Literal(fit)))),
   colorspace: T.Optional(T.String()),
+  cropLeft: T.Optional(T.Number()),
+  cropTop: T.Optional(T.Number()),
+  cropWidth: T.Optional(T.Number()),
+  cropHeight: T.Optional(T.Number()),
 });
 const formSchema = T.Object({
   file: T.Any(),
@@ -32,11 +37,35 @@ export const imageRouter = new Hono().post(
   tbValidator("query", querySchema),
   tbValidator("form", formSchema),
   async (c) => {
-    const query = c.req.valid("query");
+    const {
+      width,
+      height,
+      fit,
+      cropLeft,
+      cropTop,
+      cropWidth,
+      cropHeight,
+      ...query
+    } = c.req.valid("query");
     const opts = {
       ...query,
       format: query.format ?? ("avif" as Format),
-      fit: query.fit ?? ("inside" as Fit),
+      ...((width || height) && {
+        resize: {
+          width,
+          height,
+          fit: fit ?? ("inside" as Fit),
+        },
+      }),
+      ...(cropWidth &&
+        cropHeight && {
+          crop: {
+            left: cropLeft,
+            top: cropTop,
+            width: cropWidth,
+            height: cropHeight,
+          },
+        }),
     };
     const { file } = c.req.valid("form");
 
