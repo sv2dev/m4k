@@ -11,6 +11,7 @@ jobs:
     name: Check if version changed
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       packages: read
     outputs:
       version-changed: ${{ steps.check.outputs.changed }}
@@ -23,15 +24,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Get current version from package.json
           CURRENT_VERSION=$(jq -r .version package.json)
           PACKAGE_NAME=$(jq -r .name package.json)
-
-          # Configure npm to use GitHub registry
-          echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> ~/.npmrc
-          echo "@${{ github.repository_owner }}:registry=https://npm.pkg.github.com" >> ~/.npmrc
-
-          # Check if version already exists in registry
           if npm view "@${{ github.repository_owner }}/$PACKAGE_NAME@$CURRENT_VERSION" version &> /dev/null; then
             changed="false"
           else
