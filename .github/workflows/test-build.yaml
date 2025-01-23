@@ -1,0 +1,17 @@
+name: Test and Build
+
+on:
+  pull_request:
+    branches:
+      - main
+jobs:
+  test:
+    name: Run all tests
+    runs-on: ubuntu-latest
+    container: oven/bun:1.2.0
+    steps:
+      - uses: actions/checkout@v4
+      - run: bun install
+      - run: bun test
+      - run: bun run typecheck
+      - run: bun run build

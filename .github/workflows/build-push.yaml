@@ -1,0 +1,73 @@
+name: Build Push
+
+on:
+  push:
+    branches:
+      - main
+env:
+  IMAGE_NAME: home-photos
+jobs:
+  check-version:
+    name: Check if version changed
+    runs-on: ubuntu-latest
+    outputs:
+      version-changed: ${{ steps.check.outputs.changed }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Check if package.json version changed
+        id: check
+        shell: bash
+        run: |
+          CURRENT_VERSION=$(jq -r .version package.json)
+          git checkout HEAD^
+          PREVIOUS_VERSION=$(jq -r .version package.json)
+
+          changed=$([ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ] && echo "true" || echo "false")
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+          echo "version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
+
+  pushImage:
+    name: Build and push image
+    needs: check-version
+    if: needs.check-version.outputs.version-changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      - name: Set up Docker Buildx
+        id: builder
+        uses: docker/setup-buildx-action@v1
+      - name: Log in to registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Build and push image
+        run: |
+          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
+          VERSION=${{ needs.check-version.outputs.version }}
+          docker buildx build --push --platform linux/arm64,linux/amd64 . --tag $IMAGE_ID:$VERSION --label "runnumber=${GITHUB_RUN_ID}"
+
+  publishPackage:
+    name: Publish to GH NPM registry
+    needs: check-version
+    if: needs.check-version.outputs.version-changed == 'true'
+    runs-on: ubuntu-latest
+    container: oven/bun:1.2.0
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .npmrc
+        run: |
+          echo "@${{ github.repository_owner }}:registry=https://npm.pkg.github.com" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" >> .npmrc
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: bun install
+      - run: bun publish

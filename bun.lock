@@ -10,10 +10,8 @@
         "@sinclair/typebox": "^0.34.14",
         "@types/bun": "latest",
         "hono": "^4.6.17",
-      },
-      "peerDependencies": {
-        "typescript": "^5.0.0",
-      },
+        "typescript": "^5.0.0"
+      }
     },
   },
   "packages": {
