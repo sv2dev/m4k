@@ -22,5 +22,5 @@
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
   },
-  "repository": "github:YOUR_GITHUB_USERNAME/media-processor"
+  "repository": "github:lets-build-apps/media-processor"
 }
