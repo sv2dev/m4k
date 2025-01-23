@@ -1,12 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import { testClient } from "hono/testing";
-import { app } from "./server";
+import { imageRouter } from "./image-router";
 
-describe("server", () => {
-  const client = testClient(app);
+const client = testClient(imageRouter);
 
+describe("/process", () => {
   it("should process image", async () => {
-    const response = await client.images.process.$post({
+    const response = await client.process.$post({
       form: { file: Bun.file("fixtures/image.jpeg") },
       query: { width: "100", height: "1000" },
     });
@@ -19,7 +19,7 @@ describe("server", () => {
   });
 
   it("should return 400 if format is invalid", async () => {
-    const response = await client.images.process.$post({
+    const response = await client.process.$post({
       form: { file: Bun.file("fixtures/image.jpeg") },
       query: { format: "x" as any },
     });
