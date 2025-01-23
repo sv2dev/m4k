@@ -2,7 +2,7 @@
   "name": "@lets-build-apps/media-processor",
   "module": "src/server.ts",
   "type": "module",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "main": "src/server.ts",
   "scripts": {
     "dev": "bun --watch index.ts",
@@ -18,9 +18,6 @@
   },
   "dependencies": {
     "sharp": "^0.33.5"
-  },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
   },
   "repository": "github:lets-build-apps/media-processor"
 }

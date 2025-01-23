@@ -31,7 +31,6 @@ jobs:
           else
             changed="true"
           fi
-
           echo "changed=$changed" >> "$GITHUB_OUTPUT"
           echo "version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
 
@@ -63,7 +62,6 @@ jobs:
     needs: check-version
     if: needs.check-version.outputs.version-changed == 'true'
     runs-on: ubuntu-latest
-    container: oven/bun:1.2.0
     permissions:
       packages: write
       contents: read
@@ -71,5 +69,4 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
-      - run: bun install
-      - run: bun publish
+      - run: npm publish
