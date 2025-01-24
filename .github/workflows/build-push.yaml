@@ -10,27 +10,22 @@ jobs:
   check-version:
     name: Check if version changed
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: read
     outputs:
       version-changed: ${{ steps.check.outputs.changed }}
       version: ${{ steps.check.outputs.version }}
     steps:
       - uses: actions/checkout@v4
-      - name: Check if package version exists
+        with:
+          fetch-depth: 2
+      - name: Check if package.json version changed
         id: check
         shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           CURRENT_VERSION=$(jq -r .version package.json)
-          PACKAGE_NAME=$(jq -r .name package.json)
-          if npm view "@${{ github.repository_owner }}/$PACKAGE_NAME@$CURRENT_VERSION" version &> /dev/null; then
-            changed="false"
-          else
-            changed="true"
-          fi
+          git checkout HEAD^
+          PREVIOUS_VERSION=$(jq -r .version package.json)
+
+          changed=$([ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ] && echo "true" || echo "false")
           echo "changed=$changed" >> "$GITHUB_OUTPUT"
           echo "version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
 
