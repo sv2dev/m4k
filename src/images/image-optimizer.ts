@@ -1,57 +1,92 @@
-import sharp, { fit, format } from "sharp";
+import { Type as T, type StaticDecode } from "@sinclair/typebox";
+import sharp from "sharp";
+import { numberQueryParamSchema } from "../util/typebox-types";
 
-export const formats = Object.keys(format) as (keyof typeof format)[];
-export const fits = Object.keys(fit) as (keyof typeof fit)[];
-export type Format = (typeof formats)[number];
-export type Fit = (typeof fits)[number];
+export const optionsSchema = T.Object({
+  rotate: T.Optional(numberQueryParamSchema),
+  resize: T.Optional(
+    T.Object({
+      width: T.Optional(numberQueryParamSchema),
+      height: T.Optional(numberQueryParamSchema),
+      fit: T.Optional(
+        T.Union([
+          T.Literal("contain"),
+          T.Literal("cover"),
+          T.Literal("fill"),
+          T.Literal("inside"),
+          T.Literal("outside"),
+        ])
+      ),
+    })
+  ),
+  format: T.Optional(
+    T.Union([
+      T.Literal("avif"),
+      T.Literal("jpeg"),
+      T.Literal("png"),
+      T.Literal("webp"),
+      T.Literal("tiff"),
+      T.Literal("magick"),
+      T.Literal("openslide"),
+      T.Literal("dz"),
+      T.Literal("ppm"),
+      T.Literal("fits"),
+      T.Literal("gif"),
+      T.Literal("svg"),
+      T.Literal("heif"),
+      T.Literal("pdf"),
+      T.Literal("jp2"),
+    ])
+  ),
+  quality: T.Optional(numberQueryParamSchema),
+  keepMetadata: T.Optional(T.Boolean()),
+  keepExif: T.Optional(T.Boolean()),
+  keepIcc: T.Optional(T.Boolean()),
+  colorspace: T.Optional(T.String()),
+  crop: T.Optional(
+    T.Object({
+      left: T.Optional(T.Number()),
+      top: T.Optional(T.Number()),
+      width: T.Number(),
+      height: T.Number(),
+    })
+  ),
+});
 
-export function createImageOptimizer({
-  rotate,
-  resize,
-  format = "avif",
-  quality,
-  keepMetadata = false,
-  keepExif = false,
-  keepIcc = false,
-  colorspace,
-  crop,
-}: {
-  rotate?: number;
-  resize?: {
-    width?: number;
-    height?: number;
-    fit?: Fit;
-  };
-  format?: Format;
-  quality?: number;
-  keepMetadata?: boolean;
-  keepExif?: boolean;
-  keepIcc?: boolean;
-  colorspace?: string;
-  crop?: {
-    left?: number;
-    top?: number;
-    width: number;
-    height: number;
-  };
-}) {
-  let processImage = sharp().rotate(rotate);
+export type OptimizerOptions = StaticDecode<typeof optionsSchema>;
+export type Format = Required<OptimizerOptions>["format"];
+export type Fit = Required<Required<OptimizerOptions>["resize"]>["fit"];
+
+export function createImageOptimizer(
+  {
+    rotate,
+    resize,
+    format = "avif",
+    quality,
+    keepMetadata = false,
+    keepExif = false,
+    keepIcc = false,
+    colorspace,
+    crop,
+  }: OptimizerOptions,
+  s = sharp().rotate()
+) {
+  if (rotate) s = s.rotate(rotate);
   if (resize)
-    processImage = processImage.resize({
+    s = s.resize({
       ...resize,
       fit: resize.fit ?? "inside",
     });
-  if (keepMetadata) processImage = processImage.keepMetadata();
-  if (keepExif) processImage = processImage.keepExif();
-  if (keepIcc) processImage = processImage.keepIccProfile();
-  if (colorspace) processImage = processImage.toColorspace(colorspace);
+  if (keepMetadata) s = s.keepMetadata();
+  if (keepExif) s = s.keepExif();
+  if (keepIcc) s = s.keepIccProfile();
+  if (colorspace) s = s.toColorspace(colorspace);
   if (crop) {
-    processImage = processImage.extract({
+    s = s.extract({
       ...crop,
-      left: crop.left!,
-      top: crop.top!,
+      left: crop.left ?? 0,
+      top: crop.top ?? 0,
     });
   }
-  if (format) processImage = processImage.toFormat(format, { quality });
-  return processImage.toFormat(format, { quality });
+  return s.toFormat(format, { quality });
 }
