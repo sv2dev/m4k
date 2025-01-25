@@ -5,12 +5,11 @@ import { HTTPException } from "hono/http-exception";
 import { stream } from "hono/streaming";
 import type { RequestHeader } from "hono/utils/headers";
 import { validator } from "hono/validator";
-import { Readable } from "node:stream";
-import sharp from "sharp";
+import { fileBoundary } from "../util/multipart-form";
 import { numberQueryParamSchema } from "../util/typebox-types";
 import { tbValidator } from "../util/typebox-validator";
 import {
-  createImageOptimizer,
+  otpimizeImage as optimizeImage,
   optionsSchema,
   type OptimizerOptions,
 } from "./image-optimizer";
@@ -50,14 +49,9 @@ export const imageRouter = new Hono()
 
       c.header("Content-Type", `image/${opts.format ?? "avif"}`);
       try {
-        const optimizeImage = createImageOptimizer(opts);
         return stream(c, async (stream) => {
           try {
-            await stream.pipe(
-              readableToWeb(
-                readableFromWeb((file as File).stream()).pipe(optimizeImage)
-              )
-            );
+            await stream.pipe(optimizeImage((file as File).stream(), opts));
           } catch (e) {
             console.warn("Error processing image", (e as Error).message);
             stream.write("Error during streaming image");
@@ -106,39 +100,24 @@ export const imageRouter = new Hono()
 
       c.header("Content-Type", "multipart/form-data; boundary=file-boundary");
       try {
-        const s = sharp().rotate();
         return stream(c, async (stream) => {
-          const textEncoder = new TextEncoder();
           for (let i = 0; i < optionsArr.length; i++) {
             const opts = optionsArr[i];
-            const optimizer = createImageOptimizer(opts, s.clone());
-            const fileHeaders = [
-              `Content-Disposition: form-data; name="file${
-                i + 1
-              }"; filename="file${i + 1}.${opts.format}"`,
-              `Content-Type: image/${opts.format}`,
-            ];
+            const { format } = opts;
+            const name = `file${i + 1}`;
+            const filename = `${name}.${format}`;
+            const contentType = `image/${format}`;
             try {
               await stream.write(
-                textEncoder.encode(
-                  `${
-                    i > 0 ? "\r\n\r\n" : ""
-                  }--file-boundary\r\n${fileHeaders.join("\r\n")}\r\n\r\n`
-                )
+                fileBoundary({ first: i === 0, name, filename, contentType })
               );
-              await stream.pipe(
-                readableToWeb(
-                  readableFromWeb((file as File).stream()).pipe(optimizer)
-                )
-              );
+              await stream.pipe(optimizeImage(file.stream(), opts));
             } catch (e) {
               console.warn("Error processing image", (e as Error).message);
               stream.write("Error during streaming image");
             }
           }
-          await stream.write(
-            textEncoder.encode("\r\n\r\n--file-boundary--\r\n")
-          );
+          await stream.write(fileBoundary());
         });
       } catch (e) {
         console.warn("Error processing image", (e as Error).message);
@@ -177,13 +156,4 @@ function paramsToOptions({
         },
       }),
   };
-}
-
-// Currently bun / node types don't match with TS lib types for ReadableStream, so we need to cast to any.
-function readableFromWeb(stream: ReadableStream) {
-  return Readable.fromWeb(stream as any);
-}
-
-function readableToWeb(stream: Readable) {
-  return Readable.toWeb(stream) as unknown as ReadableStream;
 }
