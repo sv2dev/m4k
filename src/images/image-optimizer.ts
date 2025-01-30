@@ -1,7 +1,7 @@
 import { Type as T, type StaticDecode } from "@sinclair/typebox";
-import sharp from "sharp";
+import sharp, { type Sharp } from "sharp";
 import { readableFromWeb, readableToWeb } from "../util/streams";
-import { numberQueryParamSchema } from "../util/typebox-types";
+import { numberQueryParamSchema } from "../util/typebox";
 
 export const optionsSchema = T.Object({
   rotate: T.Optional(numberQueryParamSchema),
@@ -58,8 +58,13 @@ export type OptimizerOptions = StaticDecode<typeof optionsSchema>;
 export type Format = Required<OptimizerOptions>["format"];
 export type Fit = Required<Required<OptimizerOptions>["resize"]>["fit"];
 
+export function createOptimizer(input: ReadableStream) {
+  const s = sharp().rotate();
+  return readableFromWeb(input).pipe(s);
+}
+
 export function otpimizeImage(
-  input: ReadableStream,
+  s: Sharp,
   {
     rotate,
     resize,
@@ -72,7 +77,6 @@ export function otpimizeImage(
     crop,
   }: OptimizerOptions
 ) {
-  let s = sharp().rotate();
   if (rotate) s = s.rotate(rotate);
   if (resize)
     s = s.resize({
@@ -90,7 +94,5 @@ export function otpimizeImage(
       top: crop.top ?? 0,
     });
   }
-  return readableToWeb(
-    readableFromWeb(input).pipe(s.toFormat(format, { quality }))
-  );
+  return readableToWeb(s.toFormat(format, { quality }));
 }

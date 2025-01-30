@@ -1,14 +1,9 @@
 import { Type as T, type StaticDecode } from "@sinclair/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
-import { Hono, type Env, type MiddlewareHandler } from "hono";
-import { HTTPException } from "hono/http-exception";
-import { stream } from "hono/streaming";
-import type { RequestHeader } from "hono/utils/headers";
-import { validator } from "hono/validator";
 import { fileBoundary } from "../util/multipart-form";
-import { numberQueryParamSchema } from "../util/typebox-types";
-import { tbValidator } from "../util/typebox-validator";
+import { numberQueryParamSchema, parse } from "../util/typebox";
 import {
+  createOptimizer,
   otpimizeImage as optimizeImage,
   optionsSchema,
   type OptimizerOptions,
@@ -30,103 +25,64 @@ const querySchema = T.Object({
   cropWidth: T.Optional(T.Number()),
   cropHeight: T.Optional(T.Number()),
 });
+const compiledQuerySchema = TypeCompiler.Compile(querySchema);
 const compiledOptionsArraySchema = TypeCompiler.Compile(T.Array(optionsSchema));
-const formSchema = T.Object({
-  file: T.Any(),
-});
 
-type MultiFileHeaders = Partial<Record<RequestHeader, string>> &
-  (Record<"X-Options", string> | Record<"x-options", string>);
-
-export const imageRouter = new Hono()
-  .post(
-    "/process",
-    tbValidator("query", querySchema),
-    tbValidator("form", formSchema),
-    async (c) => {
-      const opts = paramsToOptions(c.req.valid("query"));
-      const { file } = c.req.valid("form");
-
-      c.header("Content-Type", `image/${opts.format ?? "avif"}`);
-      try {
-        return stream(c, async (stream) => {
-          try {
-            await stream.pipe(optimizeImage((file as File).stream(), opts));
-          } catch (e) {
-            console.warn("Error processing image", (e as Error).message);
-            stream.write("Error during streaming image");
-          }
-        });
-      } catch (e) {
-        console.warn("Error processing image", (e as Error).message);
-        return c.text("Error during image processing", 500);
-      }
-    }
-  )
-  .post(
-    "/process/multi",
-    validator("header", (value) => {
-      const json = value["x-options"];
-      if (!json)
-        throw new HTTPException(400, {
-          message: "X-Options header is required",
-        });
-      let options: any;
-      try {
-        options = JSON.parse(json);
-      } catch (e) {
-        throw new HTTPException(400, {
-          message: "X-Options header is not valid JSON",
-        });
-      }
-      if (!compiledOptionsArraySchema.Check(options)) {
-        const error = compiledOptionsArraySchema.Errors(options).First();
-        throw new HTTPException(400, { message: error?.message });
-      }
-      return compiledOptionsArraySchema.Decode(options);
-    }) as MiddlewareHandler<
-      Env,
-      string,
-      {
-        in: { header: MultiFileHeaders | MultiFileHeaders[] };
-        out: { header: StaticDecode<typeof optionsSchema>[] };
-      }
-    >,
-    tbValidator("form", formSchema),
-    async (c) => {
-      const optionsArr = c.req.valid("header");
-
-      const { file } = c.req.valid("form");
-
-      c.header("Content-Type", "multipart/form-data; boundary=file-boundary");
-      try {
-        return stream(c, async (stream) => {
-          for (let i = 0; i < optionsArr.length; i++) {
-            const opts = optionsArr[i];
-            const { format } = opts;
-            const name = `file${i + 1}`;
-            const filename = `${name}.${format}`;
-            const contentType = `image/${format}`;
-            try {
-              await stream.write(
-                fileBoundary({ first: i === 0, name, filename, contentType })
-              );
-              await stream.pipe(optimizeImage(file.stream(), opts));
-            } catch (e) {
-              console.warn("Error processing image", (e as Error).message);
-              stream.write("Error during streaming image");
-            }
-          }
-          await stream.write(fileBoundary());
-        });
-      } catch (e) {
-        console.warn("Error processing image", (e as Error).message);
-        return c.text("Error during image processing", 500);
-      }
-    }
+export async function processImage(req: Request) {
+  const opts = queryToOptions(
+    parse(
+      compiledQuerySchema,
+      Object.fromEntries(new URL(req.url).searchParams)
+    )
   );
 
-function paramsToOptions({
+  return new Response(optimizeImage(createOptimizer(req.body!), opts), {
+    headers: { "Content-Type": `image/${opts.format ?? "avif"}` },
+  });
+}
+
+export async function processMultiImage(req: Request) {
+  const optsHeader = req.headers.get("x-options");
+  if (!optsHeader) throw new RangeError("X-Options header is required");
+  let rawOpts: any;
+  try {
+    rawOpts = JSON.parse(optsHeader);
+  } catch (error) {
+    throw new RangeError("X-Options header is not valid JSON");
+  }
+  const optsArr = parse(compiledOptionsArraySchema, rawOpts);
+  const optimizer = createOptimizer(req.body!);
+  const fileStreams = [] as ReadableStream<Uint8Array>[];
+  for (const opts of optsArr) {
+    fileStreams.push(optimizeImage(optimizer.clone(), opts));
+  }
+  return new Response(
+    async function* () {
+      for (let i = 0; i < fileStreams.length; i++) {
+        const opts = optsArr[i];
+        const { format } = opts;
+        const name = `file${i + 1}`;
+        const filename = `${name}.${format}`;
+        const contentType = `image/${format}`;
+        yield fileBoundary({ first: i === 0, name, filename, contentType });
+        const reader = fileStreams[i].getReader();
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          yield value;
+        }
+      }
+      yield fileBoundary();
+    } as any,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data; boundary=file-boundary",
+      },
+    }
+  );
+}
+
+function queryToOptions({
   width,
   height,
   fit,
