@@ -1,6 +1,15 @@
 import { TypeCompiler } from "@sinclair/typebox/compiler";
 import { parse } from "../util/typebox";
-import { optimizeVideo, optionsSchema } from "./video-optimizer";
+import {
+  audioEncoders,
+  audioFilters,
+  inputFormats,
+  optimizeVideo,
+  optionsSchema,
+  outputFormats,
+  videoEncoders,
+  videoFilters,
+} from "./video-optimizer";
 
 const compiledParamsSchema = TypeCompiler.Compile(optionsSchema);
 
@@ -24,4 +33,28 @@ export async function processVideo(req: Request) {
     headers: { "Content-Type": video.type },
   });
   return res;
+}
+
+export function getSupportedInputFormats() {
+  return Response.json(inputFormats);
+}
+
+export function getSupportedOutputFormats() {
+  return Response.json(outputFormats);
+}
+
+export function getSupportedAudioEncoders() {
+  return Response.json(audioEncoders);
+}
+
+export function getSupportedVideoEncoders() {
+  return Response.json(videoEncoders);
+}
+
+export function getSupportedAudioFilters() {
+  return Response.json(audioFilters);
+}
+
+export function getSupportedVideoFilters() {
+  return Response.json(videoFilters);
 }

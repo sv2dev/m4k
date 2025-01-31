@@ -1,6 +1,14 @@
 import type { Server } from "bun";
 import { processImage, processMultiImage } from "./images/image-router";
-import { processVideo } from "./videos/video-router";
+import {
+  getSupportedAudioEncoders,
+  getSupportedAudioFilters,
+  getSupportedInputFormats,
+  getSupportedOutputFormats,
+  getSupportedVideoEncoders,
+  getSupportedVideoFilters,
+  processVideo,
+} from "./videos/video-router";
 
 export const server = Bun.serve({
   fetch: async (req, server) => {
@@ -25,9 +33,22 @@ const routes = {
     "/images/process/multi": processMultiImage,
     "/videos/process": processVideo,
   },
+  GET: {
+    "/videos/formats": getSupportedOutputFormats,
+    "/videos/input-formats": getSupportedInputFormats,
+    "/videos/encoders": getSupportedVideoEncoders,
+    "/videos/filters": getSupportedVideoFilters,
+    "/videos/audio-encoders": getSupportedAudioEncoders,
+    "/videos/audio-filters": getSupportedAudioFilters,
+  },
 } as Partial<
   Record<
     string,
-    Partial<Record<string, (req: Request, server: Server) => Promise<Response>>>
+    Partial<
+      Record<
+        string,
+        (req: Request, server: Server) => Promise<Response> | Response
+      >
+    >
   >
 >;

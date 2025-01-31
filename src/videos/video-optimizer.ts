@@ -12,35 +12,64 @@ const [formats, encoders, filters] = await Promise.all([
 
 export const audioEncoders = Object.entries(encoders)
   .filter(([_, e]) => e.type === "audio")
-  .map(([name, { description }]) => ({ name, description }));
+  .reduce(
+    (acc, [name, { description }]) => ({ ...acc, [name]: description }),
+    {}
+  );
 export const videoEncoders = Object.entries(encoders)
   .filter(([_, e]) => e.type === "video")
-  .map(([name, { description }]) => ({ name, description }));
+  .reduce(
+    (acc, [name, { description }]) => ({ ...acc, [name]: description }),
+    {}
+  );
 export const audioFilters = Object.entries(filters)
   .filter(([_, f]) => f.output === "audio")
-  .map(([name, { description }]) => ({ name, description }));
+  .reduce(
+    (acc, [name, { description }]) => ({ ...acc, [name]: description }),
+    {}
+  );
 export const videoFilters = Object.entries(filters)
   .filter(([_, f]) => f.output === "video")
-  .map(([name, { description }]) => ({ name, description }));
-export const outputFormats = Object.entries(formats)
-  .filter(([_, f]) => f.canMux)
-  .map(([name, { description }]) => ({ name, description }));
+  .reduce(
+    (acc, [name, { description }]) => ({ ...acc, [name]: description }),
+    {}
+  );
+export const inputFormats = Object.keys(formats).reduce(
+  (acc, f) =>
+    formats[f].canDemux ? { ...acc, [f]: formats[f].description } : acc,
+  {}
+);
+export const outputFormats = Object.keys(formats).reduce(
+  (acc, f) =>
+    formats[f].canMux ? { ...acc, [f]: formats[f].description } : acc,
+  {}
+);
 
 export const optionsSchema = T.Object({
   audioBitrate: T.Optional(T.Union([T.String(), T.Number()])),
-  audioCodec: T.Optional(T.Union(audioEncoders.map((e) => T.Literal(e.name)))),
-  audioFilters: T.Optional(T.Union(audioFilters.map((f) => T.Literal(f.name)))),
+  audioCodec: T.Optional(
+    T.Union(Object.keys(audioEncoders).map((e) => T.Literal(e)))
+  ),
+  audioFilters: T.Optional(
+    T.Union(Object.keys(audioFilters).map((f) => T.Literal(f)))
+  ),
   autopad: T.Optional(T.Union([T.Boolean(), T.String()])),
   aspect: T.Optional(T.Union([T.String(), T.Number()])),
-  format: T.Optional(T.Union(outputFormats.map((f) => T.Literal(f.name)))),
+  format: T.Optional(
+    T.Union(Object.keys(outputFormats).map((f) => T.Literal(f)))
+  ),
   fps: T.Optional(T.Number()),
   output: T.Optional(T.String()),
   seek: T.Optional(T.Union([T.String(), T.Number()])),
   size: T.Optional(T.Union([T.String()])),
   videoBitrate: T.Optional(T.Union([T.String(), T.Number()])),
   videoBitrateConstant: T.Optional(T.Boolean()),
-  videoCodec: T.Optional(T.Union(videoEncoders.map((e) => T.Literal(e.name)))),
-  videoFilters: T.Optional(T.Union(videoFilters.map((f) => T.Literal(f.name)))),
+  videoCodec: T.Optional(
+    T.Union(Object.keys(videoEncoders).map((e) => T.Literal(e)))
+  ),
+  videoFilters: T.Optional(
+    T.Union(Object.keys(videoFilters).map((f) => T.Literal(f)))
+  ),
 });
 
 export type OptimizerOptions = StaticDecode<typeof optionsSchema>;

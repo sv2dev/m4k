@@ -1,5 +1,21 @@
 import { describe, expect, it } from "bun:test";
-import { processVideo } from "./video-router";
+import {
+  audioEncoders,
+  audioFilters,
+  inputFormats,
+  outputFormats,
+  videoEncoders,
+  videoFilters,
+} from "./video-optimizer";
+import {
+  getSupportedAudioEncoders,
+  getSupportedAudioFilters,
+  getSupportedInputFormats,
+  getSupportedOutputFormats,
+  getSupportedVideoEncoders,
+  getSupportedVideoFilters,
+  processVideo,
+} from "./video-router";
 
 describe("/process", () => {
   it("should process a video", async () => {
@@ -37,8 +53,61 @@ describe("/process", () => {
     const blob = await response.blob();
     expect(blob.size).toBe(0);
     const outFile = Bun.file("/tmp/test-output.mp4");
-    Bun.write("foo.mp4", await outFile.arrayBuffer());
     expect(outFile.size).toBe(1055835);
     await outFile.unlink();
+  });
+});
+
+describe("/videos/formats", () => {
+  it("should return supported formats", async () => {
+    const response = getSupportedOutputFormats();
+    expect(response.status).toBe(200);
+    const json = await response.json();
+    expect(json).toEqual(outputFormats);
+  });
+});
+
+describe("/videos/input-formats", () => {
+  it("should return supported formats", async () => {
+    const response = getSupportedInputFormats();
+    expect(response.status).toBe(200);
+    const json = await response.json();
+    expect(json).toEqual(inputFormats);
+  });
+});
+
+describe("/videos/encoders", () => {
+  it("should return supported encoders", async () => {
+    const response = getSupportedVideoEncoders();
+    expect(response.status).toBe(200);
+    const json = await response.json();
+    expect(json).toEqual(videoEncoders);
+  });
+});
+
+describe("/videos/filters", () => {
+  it("should return supported filters", async () => {
+    const response = getSupportedVideoFilters();
+    expect(response.status).toBe(200);
+    const json = await response.json();
+    expect(json).toEqual(videoFilters);
+  });
+});
+
+describe("/videos/audio-encoders", () => {
+  it("should return supported audio encoders", async () => {
+    const response = getSupportedAudioEncoders();
+    expect(response.status).toBe(200);
+    const json = await response.json();
+    expect(json).toEqual(audioEncoders);
+  });
+});
+
+describe("/videos/audio-filters", () => {
+  it("should return supported audio filters", async () => {
+    const response = getSupportedAudioFilters();
+    expect(response.status).toBe(200);
+    const json = await response.json();
+    expect(json).toEqual(audioFilters);
   });
 });
