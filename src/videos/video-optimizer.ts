@@ -2,7 +2,9 @@ import { Type as T, type StaticDecode } from "@sinclair/typebox";
 import ffmpeg from "fluent-ffmpeg";
 import { promisify } from "node:util";
 
-// ffmpeg.setFfmpegPath(path);
+const ffmpegPath =
+  Bun.env.FFMPEG_PATH ?? (await import("@ffmpeg-installer/ffmpeg")).path;
+ffmpeg.setFfmpegPath(ffmpegPath);
 
 const [formats, encoders, filters] = await Promise.all([
   promisify(ffmpeg.getAvailableFormats)(),
@@ -89,7 +91,7 @@ export async function optimizeVideo(
     await Bun.write(inputPath, await Bun.readableStreamToArrayBuffer(input));
     const proc = Bun.spawn(
       [
-        "ffmpeg",
+        ffmpegPath,
         "-y",
         "-i",
         inputPath,
