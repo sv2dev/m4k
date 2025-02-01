@@ -7,22 +7,16 @@ import {
   videoEncoders,
   videoFilters,
 } from "./video-optimizer";
-import {
-  getSupportedAudioEncoders,
-  getSupportedAudioFilters,
-  getSupportedInputFormats,
-  getSupportedOutputFormats,
-  getSupportedVideoEncoders,
-  getSupportedVideoFilters,
-  processVideo,
-} from "./video-router";
+import { videoRouter } from "./video-router";
+
+const app = videoRouter();
 
 describe("/process", () => {
   it("should process a video", async () => {
     const query = new URLSearchParams({
       format: "mp4",
     });
-    const response = await processVideo(
+    const response = await app.handle(
       new Request(`http://localhost:3000/process?${query}`, {
         method: "POST",
         body: Bun.file("fixtures/video.mp4"),
@@ -32,7 +26,7 @@ describe("/process", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("video/mp4");
     const blob = await response.blob();
-    Bun.sleep(1);
+    Bun.sleep(10);
     expect(await Bun.file("/tmp/output.mp4").exists()).toBe(false);
     expect(blob.size).toBeGreaterThan(1000);
   });
@@ -42,7 +36,7 @@ describe("/process", () => {
       format: "mp4",
       output: "/tmp/test-output.mp4",
     });
-    const response = await processVideo(
+    const response = await app.handle(
       new Request(`http://localhost:3000/process?${query}`, {
         method: "POST",
         body: Bun.file("fixtures/video.mp4"),
@@ -60,7 +54,9 @@ describe("/process", () => {
 
 describe("/videos/formats", () => {
   it("should return supported formats", async () => {
-    const response = getSupportedOutputFormats();
+    const response = await app.handle(
+      new Request("http://localhost:3000/formats")
+    );
     expect(response.status).toBe(200);
     const json = await response.json();
     expect(json).toEqual(outputFormats);
@@ -69,7 +65,9 @@ describe("/videos/formats", () => {
 
 describe("/videos/input-formats", () => {
   it("should return supported formats", async () => {
-    const response = getSupportedInputFormats();
+    const response = await app.handle(
+      new Request("http://localhost:3000/input-formats")
+    );
     expect(response.status).toBe(200);
     const json = await response.json();
     expect(json).toEqual(inputFormats);
@@ -78,7 +76,9 @@ describe("/videos/input-formats", () => {
 
 describe("/videos/encoders", () => {
   it("should return supported encoders", async () => {
-    const response = getSupportedVideoEncoders();
+    const response = await app.handle(
+      new Request("http://localhost:3000/encoders")
+    );
     expect(response.status).toBe(200);
     const json = await response.json();
     expect(json).toEqual(videoEncoders);
@@ -87,7 +87,9 @@ describe("/videos/encoders", () => {
 
 describe("/videos/filters", () => {
   it("should return supported filters", async () => {
-    const response = getSupportedVideoFilters();
+    const response = await app.handle(
+      new Request("http://localhost:3000/filters")
+    );
     expect(response.status).toBe(200);
     const json = await response.json();
     expect(json).toEqual(videoFilters);
@@ -96,7 +98,9 @@ describe("/videos/filters", () => {
 
 describe("/videos/audio-encoders", () => {
   it("should return supported audio encoders", async () => {
-    const response = getSupportedAudioEncoders();
+    const response = await app.handle(
+      new Request("http://localhost:3000/audio-encoders")
+    );
     expect(response.status).toBe(200);
     const json = await response.json();
     expect(json).toEqual(audioEncoders);
@@ -105,7 +109,9 @@ describe("/videos/audio-encoders", () => {
 
 describe("/videos/audio-filters", () => {
   it("should return supported audio filters", async () => {
-    const response = getSupportedAudioFilters();
+    const response = await app.handle(
+      new Request("http://localhost:3000/audio-filters")
+    );
     expect(response.status).toBe(200);
     const json = await response.json();
     expect(json).toEqual(audioFilters);
