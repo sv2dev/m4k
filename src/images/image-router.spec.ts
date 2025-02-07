@@ -18,86 +18,62 @@ describe("/process", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("content-type")).toBe(
-      "image/avif, text/event-stream; charset=utf-8"
+    expect(response.headers.get("content-type")).toMatch(
+      /^multipart\/form-data; boundary=/
     );
-    const blob = await response.blob();
+    const data = await response.formData();
 
-    expect(blob.size).toBe(500);
+    expect((data.get("file1") as File).size).toBe(502);
   });
 
   it("should throw if format is invalid", async () => {
     const query = new URLSearchParams({
       format: "x",
     });
-    try {
-      await app.handle(
-        new Request(`http://localhost:3000/process?${query}`, {
-          method: "POST",
-          body: Bun.file("fixtures/image.jpeg"),
-        })
-      );
-    } catch (error) {
-      expect(error).toBeInstanceOf(RangeError);
-      expect((error as RangeError).message).toBe(
-        "[/format] Expected union value"
-      );
-    }
-  });
-});
+    const res = await app.handle(
+      new Request(`http://localhost:3000/process?${query}`, {
+        method: "POST",
+        body: Bun.file("fixtures/image.jpeg"),
+      })
+    );
 
-describe("/process/multi", () => {
-  it("should throw if no X-Options header is provided", async () => {
-    try {
-      await app.handle(
-        new Request(`http://localhost:3000/process/multi`, {
-          method: "POST",
-          body: Bun.file("fixtures/image.jpeg"),
-        })
-      );
-    } catch (error) {
-      expect(error).toBeInstanceOf(RangeError);
-      expect((error as RangeError).message).toBe(
-        "X-Options header is required"
-      );
-    }
+    expect(res.status).toBe(422);
+    expect(await res.json()).toEqual(
+      expect.objectContaining({
+        property: "/format",
+        message: "Expected union value",
+      })
+    );
   });
 
-  it("should throw if X-Options header is not valid JSON", async () => {
-    try {
-      await app.handle(
-        new Request(`http://localhost:3000/process/multi`, {
-          method: "POST",
-          body: Bun.file("fixtures/image.jpeg"),
-          headers: { "X-Options": "{" },
-        })
-      );
-    } catch (error) {
-      expect(error).toBeInstanceOf(RangeError);
-      expect((error as RangeError).message).toBe(
-        "X-Options header is not valid JSON"
-      );
-    }
+  it("should return 400 if no options are provided", async () => {
+    const res = await app.handle(
+      new Request(`http://localhost:3000/process`, {
+        method: "POST",
+        body: Bun.file("fixtures/image.jpeg"),
+      })
+    );
+
+    expect(res.status).toBe(400);
+    expect(await res.text()).toBe("No options provided");
   });
 
-  it("should return 400 if X-Options header does not contain valid options", async () => {
-    try {
-      await app.handle(
-        new Request(`http://localhost:3000/process/multi`, {
-          method: "POST",
-          body: Bun.file("fixtures/image.jpeg"),
-          headers: { "X-Options": "{}" },
-        })
-      );
-    } catch (error) {
-      expect(error).toBeInstanceOf(RangeError);
-      expect((error as RangeError).message).toBe("Expected array");
-    }
+  it("should return 400 if X-Options header is not valid JSON", async () => {
+    const res = await app.handle(
+      new Request(`http://localhost:3000/process`, {
+        method: "POST",
+        body: Bun.file("fixtures/image.jpeg"),
+        headers: { "X-Options": "{" },
+      })
+    );
+
+    expect(res.status).toBe(400);
+    expect(await res.text()).toBe("Error while parsing options");
   });
 
   it("should process images", async () => {
     const response = await app.handle(
-      new Request(`http://localhost:3000/process/multi`, {
+      new Request(`http://localhost:3000/process`, {
         method: "POST",
         body: Bun.file("fixtures/image.jpeg"),
         headers: {

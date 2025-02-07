@@ -72,6 +72,7 @@ export const optionsSchema = T.Object({
   videoFilters: T.Optional(
     T.Union(Object.keys(videoFilters).map((f) => T.Literal(f)))
   ),
+  options: T.Optional(T.String()),
 });
 
 export type OptimizerOptions = StaticDecode<typeof optionsSchema>;

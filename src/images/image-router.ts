@@ -2,7 +2,8 @@ import { Type as T, type StaticDecode } from "@sinclair/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
 import Elysia from "elysia";
 import { fileBoundary } from "../util/multipart-form";
-import { numberQueryParamSchema, parse } from "../util/typebox";
+import { parseOpts } from "../util/request-parsing";
+import { numberQueryParamSchema } from "../util/typebox";
 import {
   createOptimizer,
   otpimizeImage as optimizeImage,
@@ -25,72 +26,66 @@ const querySchema = T.Object({
   cropTop: T.Optional(T.Number()),
   cropWidth: T.Optional(T.Number()),
   cropHeight: T.Optional(T.Number()),
+  options: T.Optional(T.String()),
 });
-const compiledOptionsArraySchema = TypeCompiler.Compile(T.Array(optionsSchema));
+const compiledOptionsSchema = TypeCompiler.Compile(optionsSchema);
 
 export function imageRouter<Prefix extends string | undefined>(
   prefix?: Prefix
 ) {
-  return new Elysia({ prefix })
-    .post(
-      "/process",
-      async ({ query, request, set }) => {
-        const image = optimizeImage(
-          createOptimizer(request.body!),
-          queryToOptions(query)
-        );
-        set.headers = { "Content-Type": `image/${query.format ?? "avif"}` };
-        return image;
-      },
-      { query: querySchema }
-    )
-    .post(
-      "/process/multi",
-      ({ headers, request }) => {
-        let rawOpts: any;
-        try {
-          rawOpts = JSON.parse(headers["x-options"]);
-        } catch (error) {
-          throw new RangeError("X-Options header is not valid JSON");
-        }
-        const optsArr = parse(compiledOptionsArraySchema, rawOpts);
-        const optimizer = createOptimizer(request.body!);
-        const fileStreams = [] as ReadableStream<Uint8Array>[];
-        for (const opts of optsArr) {
-          fileStreams.push(optimizeImage(optimizer.clone(), opts));
-        }
-        return new Response(
-          async function* () {
-            for (let i = 0; i < fileStreams.length; i++) {
-              const opts = optsArr[i];
-              const { format } = opts;
-              const name = `file${i + 1}`;
-              const filename = `${name}.${format}`;
-              const contentType = `image/${format}`;
-              yield fileBoundary({
-                first: i === 0,
-                name,
-                filename,
-                contentType,
-              });
-              const reader = fileStreams[i].getReader();
-              while (true) {
-                const { value, done } = await reader.read();
-                if (done) break;
-                yield value;
-              }
-              yield fileBoundary();
+  return new Elysia({ prefix }).post(
+    "/process",
+    async ({ request, error }) => {
+      let optsArr: OptimizerOptions[];
+      try {
+        optsArr = parseOpts(request, compiledOptionsSchema, queryToOptions);
+      } catch (err) {
+        return error(400, (err as RangeError).message);
+      }
+      if (optsArr.length === 0) {
+        return error(400, "No options provided");
+      }
+
+      const optimizer = createOptimizer(request.body!);
+      const fileStreams = [] as ReadableStream<Uint8Array>[];
+      for (const opts of optsArr) {
+        fileStreams.push(optimizeImage(optimizer.clone(), opts));
+      }
+      return new Response(
+        async function* () {
+          for (let i = 0; i < fileStreams.length; i++) {
+            const opts = optsArr[i];
+            const { format } = opts;
+            const name = `file${i + 1}`;
+            const filename = `${name}.${format}`;
+            const contentType = Bun.file(filename).type;
+            yield fileBoundary({
+              first: i === 0,
+              name,
+              filename,
+              contentType,
+            });
+            const reader = fileStreams[i].getReader();
+            while (true) {
+              const { value, done } = await reader.read();
+              if (done) break;
+              yield value;
             }
-          } as any as ReadableStream<Uint8Array>,
-          {
-            headers: {
-              "content-type": "multipart/form-data; boundary=file-boundary",
-            },
+            yield fileBoundary();
           }
-        );
-      },
-      { headers: T.Object({ "x-options": T.String() }) }
-    );
+        } as any as ReadableStream<Uint8Array>,
+        {
+          headers: {
+            "content-type": "multipart/form-data; boundary=file-boundary",
+          },
+        }
+      );
+    },
+    {
+      headers: T.Object({ "x-options": T.Optional(T.String()) }),
+      query: querySchema,
+    }
+  );
 }
 
 function queryToOptions({
