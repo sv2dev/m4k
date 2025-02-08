@@ -26,8 +26,37 @@ describe("/process", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("video/mp4");
     const blob = await response.blob();
-    expect(await Bun.file("/tmp/output.mp4").exists()).toBe(false);
     expect(blob.size).toBeGreaterThan(1000);
+  });
+
+  it("should process multiple videos in sequence", async () => {
+    const query = new URLSearchParams({
+      format: "mp4",
+    });
+    const res1 = app.handle(
+      new Request(`http://localhost:3000/process?${query}`, {
+        method: "POST",
+        body: Bun.file("fixtures/video.mp4"),
+      })
+    );
+    const res2 = app.handle(
+      new Request(`http://localhost:3000/process?${query}`, {
+        method: "POST",
+        body: Bun.file("fixtures/video.mp4"),
+      })
+    );
+
+    const [response1, response2] = await Promise.all([res1, res2]);
+
+    expect(response1.status).toBe(200);
+    expect(response1.headers.get("content-type")).toBe("video/mp4");
+    const blob1 = await response1.blob();
+    expect(blob1.size).toBeGreaterThan(1000);
+
+    expect(response2.status).toBe(200);
+    expect(response2.headers.get("content-type")).toBe("video/mp4");
+    const blob2 = await response2.blob();
+    expect(blob2.size).toBeGreaterThan(1000);
   });
 
   it("should not stream back, if output is provided", async () => {

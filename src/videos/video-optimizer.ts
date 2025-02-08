@@ -85,9 +85,10 @@ export async function optimizeVideo(
   opts: OptimizerOptions,
   input: ReadableStream
 ) {
+  const uuid = Bun.randomUUIDv7("base64url");
   const outPath =
-    opts.output ?? `/tmp/output.${extensionMap[opts.format!] ?? "mp4"}`;
-  const inputPath = `/tmp/input${Date.now()}.mov`;
+    opts.output ?? `/tmp/output-${uuid}.${extensionMap[opts.format!] ?? "mp4"}`;
+  const inputPath = `/tmp/input-${uuid}.mov`;
   try {
     await Bun.write(inputPath, await Bun.readableStreamToArrayBuffer(input));
     const proc = Bun.spawn(
