@@ -89,16 +89,12 @@ describe("/process", () => {
     );
 
     const [buf1, buf2] = await Promise.all([
-      (await r1).arrayBuffer(),
-      (await r2).arrayBuffer(),
+      (await r1).formData(),
+      (await r2).formData(),
     ]);
 
-    expect(new TextDecoder().decode(buf1.slice(0, 200))).toInclude(
-      JSON.stringify({ position: 1 })
-    );
-    expect(new TextDecoder().decode(buf2.slice(0, 200))).toInclude(
-      JSON.stringify({ position: 2 })
-    );
+    expect(buf1.getAll("position")!).toEqual(["1"]);
+    expect(buf2.getAll("position")!).toEqual(["2", "1"]);
   });
 
   it("should not stream back, if output is provided", async () => {
@@ -115,9 +111,8 @@ describe("/process", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(await response.text()).toBe(
-      `--file-boundary\r\nContent-Type: application/json\r\n\r\n{\"position\":1}\r\n\r\n--file-boundary--\r\n`
-    );
+    const data = await response.formData();
+    expect(data.getAll("position")).toEqual(["1"]);
     const outFile = Bun.file("/tmp/test-output.mp4");
     expect(outFile.size).toBeGreaterThan(1000);
     await outFile.unlink();

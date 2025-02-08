@@ -22,7 +22,7 @@ describe("/process", () => {
       /^multipart\/form-data; boundary=/
     );
     const data = await response.formData();
-    expect((data.get("file1") as File).size).toBe(502);
+    expect((data.get("file1") as File).size).toBe(500);
   });
 
   it("should stream the queue position", async () => {
@@ -44,16 +44,12 @@ describe("/process", () => {
     );
 
     const [buf1, buf2] = await Promise.all([
-      (await r1).arrayBuffer(),
-      (await r2).arrayBuffer(),
+      (await r1).formData(),
+      (await r2).formData(),
     ]);
 
-    expect(new TextDecoder().decode(buf1)).toInclude(
-      JSON.stringify({ position: 1 })
-    );
-    expect(new TextDecoder().decode(buf2)).toInclude(
-      JSON.stringify({ position: 2 })
-    );
+    expect(buf1.getAll("position")!).toEqual(["1"]);
+    expect(buf2.getAll("position")!).toEqual(["2"]);
   });
 
   it("should throw if format is invalid", async () => {
@@ -118,8 +114,6 @@ describe("/process", () => {
     const formData = await response.formData();
     const file1 = formData.get("file1") as File;
     const file2 = formData.get("file2") as File;
-    const blob1 = await file1.arrayBuffer();
-    const blob2 = await file2.arrayBuffer();
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toMatch(
@@ -129,7 +123,7 @@ describe("/process", () => {
     expect(file2.type).toBe("image/webp");
     expect(file1.name).toBe("file1.avif");
     expect(file2.name).toBe("file2.webp");
-    expect(blob1.byteLength).toBe(992);
-    expect(blob2.byteLength).toBe(1412);
+    expect(file1.size).toBe(1011);
+    expect(file2.size).toBe(1410);
   });
 });

@@ -1,7 +1,7 @@
 import { Type as T, type StaticDecode } from "@sinclair/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
 import Elysia from "elysia";
-import { fileBoundary } from "../util/multipart-form";
+import { FILE_BOUNDARY, fileBoundary } from "../util/multipart-form";
 import { parseOpts } from "../util/request-parsing";
 import { numberQueryParamSchema } from "../util/typebox";
 import {
@@ -87,7 +87,7 @@ export function imageRouter<Prefix extends string | undefined>(
       streamQueuePosition();
       return new Response(readable, {
         headers: {
-          "content-type": "multipart/form-data; boundary=file-boundary",
+          "content-type": `multipart/form-data; boundary=${FILE_BOUNDARY}`,
         },
       });
 
@@ -95,13 +95,8 @@ export function imageRouter<Prefix extends string | undefined>(
         for await (const [position] of iterable) {
           if (position === null) writer.close();
           else if (position > 0) {
-            writer.write(
-              fileBoundary({
-                first,
-                contentType: "application/json",
-              })
-            );
-            writer.write(te.encode(JSON.stringify({ position })));
+            writer.write(fileBoundary({ first, name: "position" }));
+            writer.write(te.encode(position.toString()));
             first = false;
           }
         }

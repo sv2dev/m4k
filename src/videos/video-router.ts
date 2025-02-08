@@ -2,7 +2,7 @@ import { Type as T } from "@sinclair/typebox";
 import Elysia from "elysia";
 import { TypeCompiler } from "elysia/type-system";
 import { extname } from "node:path";
-import { fileBoundary } from "../util/multipart-form";
+import { FILE_BOUNDARY, fileBoundary } from "../util/multipart-form";
 import { parseOpts } from "../util/request-parsing";
 import {
   audioEncoders,
@@ -75,20 +75,15 @@ export function videoRouter<Prefix extends string | undefined>(
         streamQueuePosition();
         return new Response(readable, {
           headers: {
-            "content-type": "multipart/form-data; boundary=file-boundary",
+            "content-type": `multipart/form-data; boundary=${FILE_BOUNDARY}`,
           },
         });
 
         async function streamQueuePosition() {
           for await (const [position] of iterable) {
             if (position !== null && position > 0) {
-              writer.write(
-                fileBoundary({
-                  first,
-                  contentType: "application/json",
-                })
-              );
-              writer.write(te.encode(JSON.stringify({ position })));
+              writer.write(fileBoundary({ first, name: "position" }));
+              writer.write(te.encode(position.toString()));
               first = false;
             }
           }

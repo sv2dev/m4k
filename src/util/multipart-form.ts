@@ -1,7 +1,7 @@
 const textEncoder = new TextEncoder();
 
-const FB = `--file-boundary`;
-const LB = "\r\n";
+export const FILE_BOUNDARY = `file-boundary-${Bun.randomUUIDv7("base64url")}`;
+const LINE_BREAK = "\r\n";
 
 export function fileBoundary(opts: {
   first?: boolean;
@@ -23,10 +23,9 @@ export function fileBoundary({
 } = {}) {
   const last = !first && !name && !filename && !contentType;
   const lines: string[] = [
-    ...(first ? [] : [LB]),
     ...(!last
       ? [
-          FB,
+          `--${FILE_BOUNDARY}`,
           ...(name || filename
             ? [
                 [
@@ -37,9 +36,11 @@ export function fileBoundary({
               ]
             : []),
           ...(contentType ? [`Content-Type: ${contentType}`] : []),
-          LB,
+          LINE_BREAK,
         ]
-      : [`${FB}--${LB}`]),
+      : [`--${FILE_BOUNDARY}--${LINE_BREAK}`]),
   ];
-  return textEncoder.encode(lines.join(LB));
+  return textEncoder.encode(
+    `${first ? "" : LINE_BREAK}${lines.join(LINE_BREAK)}`
+  );
 }
