@@ -5,9 +5,9 @@ const LB = "\r\n";
 
 export function fileBoundary(opts: {
   first?: boolean;
-  name: string;
-  filename: string;
-  contentType: string;
+  name?: string;
+  filename?: string;
+  contentType?: string;
 }): Uint8Array;
 export function fileBoundary(): Uint8Array;
 export function fileBoundary({
@@ -27,8 +27,16 @@ export function fileBoundary({
     ...(!last
       ? [
           FB,
-          `Content-Disposition: form-data; name="${name}"; filename="${filename}"`,
-          `Content-Type: ${contentType}`,
+          ...(name || filename
+            ? [
+                [
+                  `Content-Disposition: form-data`,
+                  ...(name ? [`name="${name}"`] : []),
+                  ...(filename ? [`filename="${filename}"`] : []),
+                ].join("; "),
+              ]
+            : []),
+          ...(contentType ? [`Content-Type: ${contentType}`] : []),
           LB,
         ]
       : [`${FB}--${LB}`]),

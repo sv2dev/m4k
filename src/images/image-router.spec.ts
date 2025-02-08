@@ -5,7 +5,7 @@ import { imageRouter } from "./image-router";
 const app = imageRouter();
 
 describe("/process", () => {
-  it("should process image", async () => {
+  it("should process a single image", async () => {
     const query = new URLSearchParams({
       width: "100",
       height: "1000",
@@ -22,8 +22,38 @@ describe("/process", () => {
       /^multipart\/form-data; boundary=/
     );
     const data = await response.formData();
-
     expect((data.get("file1") as File).size).toBe(502);
+  });
+
+  it("should stream the queue position", async () => {
+    const query = new URLSearchParams({
+      width: "100",
+      height: "1000",
+    });
+    const r1 = app.handle(
+      new Request(`http://localhost:3000/process?${query}`, {
+        method: "POST",
+        body: Bun.file("fixtures/image.jpeg"),
+      })
+    );
+    const r2 = app.handle(
+      new Request(`http://localhost:3000/process?${query}`, {
+        method: "POST",
+        body: Bun.file("fixtures/image.jpeg"),
+      })
+    );
+
+    const [buf1, buf2] = await Promise.all([
+      (await r1).arrayBuffer(),
+      (await r2).arrayBuffer(),
+    ]);
+
+    expect(new TextDecoder().decode(buf1)).toInclude(
+      JSON.stringify({ position: 1 })
+    );
+    expect(new TextDecoder().decode(buf2)).toInclude(
+      JSON.stringify({ position: 2 })
+    );
   });
 
   it("should throw if format is invalid", async () => {
@@ -71,7 +101,7 @@ describe("/process", () => {
     expect(await res.text()).toBe("Error while parsing options");
   });
 
-  it("should process images", async () => {
+  it("should process multiple images", async () => {
     const response = await app.handle(
       new Request(`http://localhost:3000/process`, {
         method: "POST",

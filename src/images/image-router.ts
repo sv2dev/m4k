@@ -6,6 +6,7 @@ import { parseOpts } from "../util/request-parsing";
 import { numberQueryParamSchema } from "../util/typebox";
 import {
   createOptimizer,
+  imageQueue,
   otpimizeImage as optimizeImage,
   optionsSchema,
   type OptimizerOptions,
@@ -36,6 +37,9 @@ export function imageRouter<Prefix extends string | undefined>(
   return new Elysia({ prefix }).post(
     "/process",
     async ({ request, error }) => {
+      if (imageQueue.size === imageQueue.max) {
+        return error(503, "Queue is full");
+      }
       let optsArr: OptimizerOptions[];
       try {
         optsArr = parseOpts(request, compiledOptionsSchema, queryToOptions);
@@ -45,41 +49,63 @@ export function imageRouter<Prefix extends string | undefined>(
       if (optsArr.length === 0) {
         return error(400, "No options provided");
       }
+      const { readable, writable } = new TransformStream<Uint8Array>();
+      const writer = writable.getWriter();
+      let first = true;
+      const te = new TextEncoder();
 
-      const optimizer = createOptimizer(request.body!);
-      const fileStreams = [] as ReadableStream<Uint8Array>[];
-      for (const opts of optsArr) {
-        fileStreams.push(optimizeImage(optimizer.clone(), opts));
-      }
-      return new Response(
-        async function* () {
-          for (let i = 0; i < fileStreams.length; i++) {
-            const opts = optsArr[i];
-            const { format } = opts;
-            const name = `file${i + 1}`;
-            const filename = `${name}.${format}`;
-            const contentType = Bun.file(filename).type;
-            yield fileBoundary({
-              first: i === 0,
+      const iterable = imageQueue.pushAndIterate(async () => {
+        const fileStreams = [] as ReadableStream<Uint8Array>[];
+        const optimizer = createOptimizer(request.body!);
+        for (const opts of optsArr) {
+          fileStreams.push(optimizeImage(optimizer.clone(), opts));
+        }
+        for (let i = 0; i < fileStreams.length; i++) {
+          const opts = optsArr[i];
+          const { format } = opts;
+          const name = `file${i + 1}`;
+          const filename = `${name}.${format}`;
+          const contentType = Bun.file(filename).type;
+          writer.write(
+            fileBoundary({
+              first,
               name,
               filename,
               contentType,
-            });
-            const reader = fileStreams[i].getReader();
-            while (true) {
-              const { value, done } = await reader.read();
-              if (done) break;
-              yield value;
-            }
-            yield fileBoundary();
+            })
+          );
+          first = false;
+          const reader = fileStreams[i].getReader();
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            writer.write(value);
           }
-        } as any as ReadableStream<Uint8Array>,
-        {
-          headers: {
-            "content-type": "multipart/form-data; boundary=file-boundary",
-          },
+          await writer.write(fileBoundary());
         }
-      );
+      })!;
+      streamQueuePosition();
+      return new Response(readable, {
+        headers: {
+          "content-type": "multipart/form-data; boundary=file-boundary",
+        },
+      });
+
+      async function streamQueuePosition() {
+        for await (const [position] of iterable) {
+          if (position === null) writer.close();
+          else if (position > 0) {
+            writer.write(
+              fileBoundary({
+                first,
+                contentType: "application/json",
+              })
+            );
+            writer.write(te.encode(JSON.stringify({ position })));
+            first = false;
+          }
+        }
+      }
     },
     {
       headers: T.Object({ "x-options": T.Optional(T.String()) }),
