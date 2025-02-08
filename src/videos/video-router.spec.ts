@@ -71,6 +71,36 @@ describe("/process", () => {
     expect(video2.name).toBe("video.mp4");
   });
 
+  it("should stream the queue position", async () => {
+    const query = new URLSearchParams({
+      format: "mp4",
+    });
+    const r1 = app.handle(
+      new Request(`http://localhost:3000/process?${query}`, {
+        method: "POST",
+        body: Bun.file("fixtures/video.mp4"),
+      })
+    );
+    const r2 = app.handle(
+      new Request(`http://localhost:3000/process?${query}`, {
+        method: "POST",
+        body: Bun.file("fixtures/video.mp4"),
+      })
+    );
+
+    const [buf1, buf2] = await Promise.all([
+      (await r1).arrayBuffer(),
+      (await r2).arrayBuffer(),
+    ]);
+
+    expect(new TextDecoder().decode(buf1.slice(0, 200))).toInclude(
+      JSON.stringify({ position: 1 })
+    );
+    expect(new TextDecoder().decode(buf2.slice(0, 200))).toInclude(
+      JSON.stringify({ position: 2 })
+    );
+  });
+
   it("should not stream back, if output is provided", async () => {
     const query = new URLSearchParams({
       format: "mp4",
@@ -84,9 +114,10 @@ describe("/process", () => {
       })
     );
 
-    expect(response.status).toBe(201);
-    const blob = await response.blob();
-    expect(blob.size).toBe(0);
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe(
+      `--file-boundary\r\nContent-Type: application/json\r\n\r\n{\"position\":1}\r\n\r\n--file-boundary--\r\n`
+    );
     const outFile = Bun.file("/tmp/test-output.mp4");
     expect(outFile.size).toBeGreaterThan(1000);
     await outFile.unlink();

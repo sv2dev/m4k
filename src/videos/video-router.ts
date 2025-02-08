@@ -13,6 +13,7 @@ import {
   outputFormats,
   videoEncoders,
   videoFilters,
+  videoQueue,
   type OptimizerOptions,
 } from "./video-optimizer";
 const compiledOptionsSchema = TypeCompiler.Compile(optionsSchema);
@@ -24,6 +25,9 @@ export function videoRouter<Prefix extends string | undefined>(
     .post(
       "/process",
       async ({ request, error }) => {
+        if (videoQueue.size === videoQueue.max) {
+          return error(503, "Queue is full");
+        }
         let opts: OptimizerOptions | undefined;
         try {
           [opts] = parseOpts(request, compiledOptionsSchema);
@@ -33,37 +37,62 @@ export function videoRouter<Prefix extends string | undefined>(
         if (!opts) {
           return error(400, "No options provided");
         }
-        const video = await optimizeVideo(opts, request.body!);
-        if (!video) return new Response(undefined, { status: 201 });
         const { readable, writable } = new TransformStream();
         const writer = writable.getWriter();
-        writer.write(
-          fileBoundary({
-            first: true,
-            contentType: video.type,
-            name: "video",
-            filename: `video${extname(video.name!)}`,
-          })
-        );
-        writer.releaseLock();
-        video
-          .stream()
-          .pipeTo(writable, { preventClose: true })
-          .then(async () => {
-            const writer = writable.getWriter();
+        let first = true;
+        const te = new TextEncoder();
+        const iterable = videoQueue.pushAndIterate(async () => {
+          const video = await optimizeVideo(opts, request.body!);
+          if (!video) {
             writer.write(fileBoundary());
             writer.close();
-            try {
-              await video.unlink();
-            } catch (error) {
-              console.error("Cleanup failed:", error);
-            }
-          });
+            return;
+          }
+          writer.write(
+            fileBoundary({
+              first: first,
+              contentType: video.type,
+              name: "video",
+              filename: `video${extname(video.name!)}`,
+            })
+          );
+          first = false;
+          writer.releaseLock();
+          await video
+            .stream()
+            .pipeTo(writable, { preventClose: true })
+            .then(async () => {
+              try {
+                await video.unlink();
+              } catch (error) {
+                console.error("Cleanup failed:", error);
+              }
+            });
+          const w = writable.getWriter();
+          w.write(fileBoundary());
+          w.close();
+        })!;
+        streamQueuePosition();
         return new Response(readable, {
           headers: {
             "content-type": "multipart/form-data; boundary=file-boundary",
           },
         });
+
+        async function streamQueuePosition() {
+          for await (const [position] of iterable) {
+            if (position !== null && position > 0) {
+              writer.write(
+                fileBoundary({
+                  first,
+                  contentType: "application/json",
+                })
+              );
+              writer.write(te.encode(JSON.stringify({ position })));
+              first = false;
+            }
+          }
+        }
       },
       {
         headers: T.Object({ "x-options": T.Optional(T.String()) }),
