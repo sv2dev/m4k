@@ -1,4 +1,5 @@
 import { Type as T, type StaticDecode } from "@sinclair/typebox";
+import { Queue } from "@sv2dev/queue";
 import ffmpeg from "fluent-ffmpeg";
 import { promisify } from "node:util";
 
@@ -116,3 +117,8 @@ export async function optimizeVideo(
 
   if (!opts.output) return Bun.file(outPath);
 }
+
+export const videoQueue = new Queue({
+  parallelize: Number(Bun.env.VIDEO_PARALLELIZE ?? 1),
+  max: Number(Bun.env.VIDEO_QUEUE_SIZE ?? 5),
+});

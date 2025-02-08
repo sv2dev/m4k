@@ -1,6 +1,8 @@
 import { Type as T } from "@sinclair/typebox";
 import Elysia from "elysia";
 import { TypeCompiler } from "elysia/type-system";
+import { extname } from "node:path";
+import { fileBoundary } from "../util/multipart-form";
 import { parseOpts } from "../util/request-parsing";
 import {
   audioEncoders,
@@ -13,7 +15,6 @@ import {
   videoFilters,
   type OptimizerOptions,
 } from "./video-optimizer";
-
 const compiledOptionsSchema = TypeCompiler.Compile(optionsSchema);
 
 export function videoRouter<Prefix extends string | undefined>(
@@ -35,20 +36,34 @@ export function videoRouter<Prefix extends string | undefined>(
         const video = await optimizeVideo(opts, request.body!);
         if (!video) return new Response(undefined, { status: 201 });
         const { readable, writable } = new TransformStream();
+        const writer = writable.getWriter();
+        writer.write(
+          fileBoundary({
+            first: true,
+            contentType: video.type,
+            name: "video",
+            filename: `video${extname(video.name!)}`,
+          })
+        );
+        writer.releaseLock();
         video
           .stream()
-          .pipeTo(writable)
+          .pipeTo(writable, { preventClose: true })
           .then(async () => {
+            const writer = writable.getWriter();
+            writer.write(fileBoundary());
+            writer.close();
             try {
               await video.unlink();
             } catch (error) {
               console.error("Cleanup failed:", error);
             }
           });
-        const res = new Response(readable, {
-          headers: { "Content-Type": video.type },
+        return new Response(readable, {
+          headers: {
+            "content-type": "multipart/form-data; boundary=file-boundary",
+          },
         });
-        return res;
       },
       {
         headers: T.Object({ "x-options": T.Optional(T.String()) }),

@@ -24,9 +24,13 @@ describe("/process", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("content-type")).toBe("video/mp4");
-    const blob = await response.blob();
-    expect(blob.size).toBeGreaterThan(1000);
+    expect(response.headers.get("content-type")).toMatch(
+      /^multipart\/form-data; boundary=/
+    );
+    const data = await response.formData();
+    const video = data.get("video") as File;
+    expect(video.size).toBeGreaterThan(1000);
+    expect(video.name).toBe("video.mp4");
   });
 
   it("should process multiple videos in sequence", async () => {
@@ -49,14 +53,22 @@ describe("/process", () => {
     const [response1, response2] = await Promise.all([res1, res2]);
 
     expect(response1.status).toBe(200);
-    expect(response1.headers.get("content-type")).toBe("video/mp4");
-    const blob1 = await response1.blob();
-    expect(blob1.size).toBeGreaterThan(1000);
+    expect(response1.headers.get("content-type")).toMatch(
+      /^multipart\/form-data; boundary=/
+    );
+    const data1 = await response1.formData();
+    const video1 = data1.get("video") as File;
+    expect(video1.size).toBeGreaterThan(1000);
+    expect(video1.name).toBe("video.mp4");
 
     expect(response2.status).toBe(200);
-    expect(response2.headers.get("content-type")).toBe("video/mp4");
-    const blob2 = await response2.blob();
-    expect(blob2.size).toBeGreaterThan(1000);
+    expect(response2.headers.get("content-type")).toMatch(
+      /^multipart\/form-data; boundary=/
+    );
+    const data2 = await response2.formData();
+    const video2 = data2.get("video") as File;
+    expect(video2.size).toBeGreaterThan(1000);
+    expect(video2.name).toBe("video.mp4");
   });
 
   it("should not stream back, if output is provided", async () => {
