@@ -5,7 +5,7 @@ on:
     branches:
       - main
 env:
-  IMAGE_NAME: media-processor
+  IMAGE_NAME: media-optimizer
 jobs:
   check-version:
     name: Check if version changed

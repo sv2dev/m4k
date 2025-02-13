@@ -1,19 +1,9 @@
-# media-processor
+# media-optimizer
 
-To install dependencies:
+Self-hosted media optimizer.
 
-```bash
-bun install
-```
-
-To run:
+## Usage
 
 ```bash
-bun dev
-```
-
-To build:
-
-```bash
-bun run build
+docker run -d -p 3000:3000 ghcr.io/sv2dev/media-optimizer
 ```
