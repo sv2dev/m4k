@@ -1,4 +1,5 @@
 import { Type as T, type StaticDecode } from "@sinclair/typebox";
+import { Queue } from "@sv2dev/queue";
 import sharp, { type Sharp } from "sharp";
 import { readableFromWeb, readableToWeb } from "../util/streams";
 import { numberQueryParamSchema } from "../util/typebox";
@@ -96,3 +97,8 @@ export function otpimizeImage(
   }
   return readableToWeb(s.toFormat(format, { quality }));
 }
+
+export const imageQueue = new Queue({
+  parallelize: Number(Bun.env.IMAGE_PARALLELIZE ?? 5),
+  max: Number(Bun.env.IMAGE_QUEUE_SIZE ?? 100),
+});

@@ -1,4 +1,5 @@
 import { Type as T, type StaticDecode } from "@sinclair/typebox";
+import { Queue } from "@sv2dev/queue";
 import ffmpeg from "fluent-ffmpeg";
 import { promisify } from "node:util";
 
@@ -72,6 +73,7 @@ export const optionsSchema = T.Object({
   videoFilters: T.Optional(
     T.Union(Object.keys(videoFilters).map((f) => T.Literal(f)))
   ),
+  options: T.Optional(T.String()),
 });
 
 export type OptimizerOptions = StaticDecode<typeof optionsSchema>;
@@ -84,9 +86,10 @@ export async function optimizeVideo(
   opts: OptimizerOptions,
   input: ReadableStream
 ) {
+  const uuid = Bun.randomUUIDv7("base64url");
   const outPath =
-    opts.output ?? `/tmp/output.${extensionMap[opts.format!] ?? "mp4"}`;
-  const inputPath = `/tmp/input${Date.now()}.mov`;
+    opts.output ?? `/tmp/output-${uuid}.${extensionMap[opts.format!] ?? "mp4"}`;
+  const inputPath = `/tmp/input-${uuid}.mov`;
   try {
     await Bun.write(inputPath, await Bun.readableStreamToArrayBuffer(input));
     const proc = Bun.spawn(
@@ -114,3 +117,8 @@ export async function optimizeVideo(
 
   if (!opts.output) return Bun.file(outPath);
 }
+
+export const videoQueue = new Queue({
+  parallelize: Number(Bun.env.VIDEO_PARALLELIZE ?? 1),
+  max: Number(Bun.env.VIDEO_QUEUE_SIZE ?? 5),
+});
