@@ -1,3 +1,4 @@
+import { streamParts } from "@sv2dev/multipart-stream";
 import { describe, expect, it } from "bun:test";
 import type { OptimizerOptions } from "./image-optimizer";
 import { imageRouter } from "./image-router";
@@ -18,11 +19,11 @@ describe("/process", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("content-type")).toMatch(
-      /^multipart\/form-data; boundary=/
-    );
-    const data = await response.formData();
-    expect((data.get("file1") as File).size).toBe(500);
+
+    const [part1, part2] = await Array.fromAsync(streamParts(response));
+
+    expect(await part1.json()).toEqual({ position: 1 });
+    expect((await part2.bytes()).length).toBe(500);
   });
 
   it("should stream the queue position", async () => {
@@ -43,13 +44,11 @@ describe("/process", () => {
       })
     );
 
-    const [buf1, buf2] = await Promise.all([
-      (await r1).formData(),
-      (await r2).formData(),
-    ]);
+    const [part1] = await Array.fromAsync(streamParts(await r1));
+    const [part2] = await Array.fromAsync(streamParts(await r2));
 
-    expect(buf1.getAll("position")!).toEqual(["1"]);
-    expect(buf2.getAll("position")!).toEqual(["2"]);
+    expect(await part1.json()).toEqual({ position: 1 });
+    expect(await part2.json()).toEqual({ position: 2 });
   });
 
   it("should throw if format is invalid", async () => {
@@ -111,19 +110,14 @@ describe("/process", () => {
       })
     );
 
-    const formData = await response.formData();
-    const file1 = formData.get("file1") as File;
-    const file2 = formData.get("file2") as File;
+    const [, file1, file2] = await Array.fromAsync(streamParts(response));
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("content-type")).toMatch(
-      /^multipart\/form-data; boundary=/
-    );
     expect(file1.type).toBe("image/avif");
     expect(file2.type).toBe("image/webp");
-    expect(file1.name).toBe("file1.avif");
-    expect(file2.name).toBe("file2.webp");
-    expect(file1.size).toBe(1011);
-    expect(file2.size).toBe(1410);
+    expect(file1.filename).toBe("file1.avif");
+    expect(file2.filename).toBe("file2.webp");
+    expect((await file1.bytes()).length).toBe(967);
+    expect((await file2.bytes()).length).toBe(1410);
   });
 });

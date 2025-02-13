@@ -1,3 +1,4 @@
+import { streamParts } from "@sv2dev/multipart-stream";
 import { describe, expect, it } from "bun:test";
 import {
   audioEncoders,
@@ -24,13 +25,10 @@ describe("/process", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("content-type")).toMatch(
-      /^multipart\/form-data; boundary=/
-    );
-    const data = await response.formData();
-    const video = data.get("video") as File;
-    expect(video.size).toBeGreaterThan(1000);
-    expect(video.name).toBe("video.mp4");
+    const [, video] = await Array.fromAsync(streamParts(response));
+
+    expect(video.filename).toBe("video.mp4");
+    expect((await video.bytes()).length).toBeGreaterThan(1000);
   });
 
   it("should process multiple videos in sequence", async () => {
@@ -53,22 +51,18 @@ describe("/process", () => {
     const [response1, response2] = await Promise.all([res1, res2]);
 
     expect(response1.status).toBe(200);
-    expect(response1.headers.get("content-type")).toMatch(
-      /^multipart\/form-data; boundary=/
-    );
-    const data1 = await response1.formData();
-    const video1 = data1.get("video") as File;
-    expect(video1.size).toBeGreaterThan(1000);
-    expect(video1.name).toBe("video.mp4");
+    const [, video1] = await Array.fromAsync(streamParts(response1));
+    expect(video1.filename).toBe("video.mp4");
+    expect((await video1.bytes()).length).toBeGreaterThan(1000);
 
     expect(response2.status).toBe(200);
-    expect(response2.headers.get("content-type")).toMatch(
-      /^multipart\/form-data; boundary=/
+    const [msg21, msg22, video2] = await Array.fromAsync(
+      streamParts(response2)
     );
-    const data2 = await response2.formData();
-    const video2 = data2.get("video") as File;
-    expect(video2.size).toBeGreaterThan(1000);
-    expect(video2.name).toBe("video.mp4");
+    expect(await msg21.json()).toEqual({ position: 2 });
+    expect(await msg22.json()).toEqual({ position: 1 });
+    expect(video2.filename).toBe("video.mp4");
+    expect((await video2.bytes()).length).toBeGreaterThan(1000);
   });
 
   it("should stream the queue position", async () => {
@@ -88,13 +82,14 @@ describe("/process", () => {
       })
     );
 
-    const [buf1, buf2] = await Promise.all([
-      (await r1).formData(),
-      (await r2).formData(),
+    const [stream1, stream2] = await Promise.all([
+      Array.fromAsync(streamParts(await r1)),
+      Array.fromAsync(streamParts(await r2)),
     ]);
 
-    expect(buf1.getAll("position")!).toEqual(["1"]);
-    expect(buf2.getAll("position")!).toEqual(["2", "1"]);
+    expect(await stream1[0].json()).toEqual({ position: 1 });
+    expect(await stream2[0].json()).toEqual({ position: 2 });
+    expect(await stream2[1].json()).toEqual({ position: 1 });
   });
 
   it("should not stream back, if output is provided", async () => {
@@ -111,11 +106,12 @@ describe("/process", () => {
     );
 
     expect(response.status).toBe(200);
-    const data = await response.formData();
-    expect(data.getAll("position")).toEqual(["1"]);
-    const outFile = Bun.file("/tmp/test-output.mp4");
-    expect(outFile.size).toBeGreaterThan(1000);
-    await outFile.unlink();
+    const parts = await Array.fromAsync(streamParts(response));
+    expect(parts.length).toBe(1);
+    expect(await parts[0].json()).toEqual({ position: 1 });
+    const file = Bun.file("/tmp/test-output.mp4");
+    expect(file.size).toBeGreaterThan(1000);
+    await file.unlink();
   });
 
   it("should return 400 if no options are provided", async () => {

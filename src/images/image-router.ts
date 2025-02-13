@@ -1,7 +1,7 @@
 import { Type as T, type StaticDecode } from "@sinclair/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
 import Elysia from "elysia";
-import { FILE_BOUNDARY, fileBoundary } from "../util/multipart-form";
+import { BOUNDARY, END, part } from "../util/multipart-mixed";
 import { parseOpts } from "../util/request-parsing";
 import { numberQueryParamSchema } from "../util/typebox";
 import {
@@ -52,7 +52,6 @@ export function imageRouter<Prefix extends string | undefined>(
       const { readable, writable } = new TransformStream<Uint8Array>();
       const writer = writable.getWriter();
       let first = true;
-      const te = new TextEncoder();
 
       const iterable = imageQueue.pushAndIterate(async () => {
         const fileStreams = [] as ReadableStream<Uint8Array>[];
@@ -66,14 +65,7 @@ export function imageRouter<Prefix extends string | undefined>(
           const name = `file${i + 1}`;
           const filename = `${name}.${format}`;
           const contentType = Bun.file(filename).type;
-          writer.write(
-            fileBoundary({
-              first,
-              name,
-              filename,
-              contentType,
-            })
-          );
+          writer.write(part({ first, filename, contentType }));
           first = false;
           const reader = fileStreams[i].getReader();
           while (true) {
@@ -81,13 +73,14 @@ export function imageRouter<Prefix extends string | undefined>(
             if (done) break;
             writer.write(value);
           }
-          await writer.write(fileBoundary());
+          await writer.write(END);
         }
       })!;
       streamQueuePosition();
       return new Response(readable, {
         headers: {
-          "content-type": `multipart/form-data; boundary=${FILE_BOUNDARY}`,
+          "content-type": `multipart/mixed; boundary="${BOUNDARY}"`,
+          // "transfer-encoding": "chunked",
         },
       });
 
@@ -95,8 +88,7 @@ export function imageRouter<Prefix extends string | undefined>(
         for await (const [position] of iterable) {
           if (position === null) writer.close();
           else if (position > 0) {
-            writer.write(fileBoundary({ first, name: "position" }));
-            writer.write(te.encode(position.toString()));
+            writer.write(part({ first, payload: { position } }));
             first = false;
           }
         }

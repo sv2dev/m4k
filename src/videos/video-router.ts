@@ -2,7 +2,7 @@ import { Type as T } from "@sinclair/typebox";
 import Elysia from "elysia";
 import { TypeCompiler } from "elysia/type-system";
 import { extname } from "node:path";
-import { FILE_BOUNDARY, fileBoundary } from "../util/multipart-form";
+import { BOUNDARY, END, part } from "../util/multipart-mixed";
 import { parseOpts } from "../util/request-parsing";
 import {
   audioEncoders,
@@ -40,19 +40,17 @@ export function videoRouter<Prefix extends string | undefined>(
         const { readable, writable } = new TransformStream();
         const writer = writable.getWriter();
         let first = true;
-        const te = new TextEncoder();
         const iterable = videoQueue.pushAndIterate(async () => {
           const video = await optimizeVideo(opts, request.body!);
           if (!video) {
-            writer.write(fileBoundary());
+            writer.write(END);
             writer.close();
             return;
           }
           writer.write(
-            fileBoundary({
+            part({
               first: first,
               contentType: video.type,
-              name: "video",
               filename: `video${extname(video.name!)}`,
             })
           );
@@ -69,21 +67,21 @@ export function videoRouter<Prefix extends string | undefined>(
               }
             });
           const w = writable.getWriter();
-          w.write(fileBoundary());
+          w.write(END);
           w.close();
         })!;
         streamQueuePosition();
         return new Response(readable, {
           headers: {
-            "content-type": `multipart/form-data; boundary=${FILE_BOUNDARY}`,
+            "content-type": `multipart/mixed; boundary="${BOUNDARY}"`,
+            // "transfer-encoding": "chunked",
           },
         });
 
         async function streamQueuePosition() {
           for await (const [position] of iterable) {
             if (position !== null && position > 0) {
-              writer.write(fileBoundary({ first, name: "position" }));
-              writer.write(te.encode(position.toString()));
+              writer.write(part({ first, payload: { position } }));
               first = false;
             }
           }
