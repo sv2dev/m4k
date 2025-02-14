@@ -1,6 +1,6 @@
 import { streamParts } from "@sv2dev/multipart-stream";
 import { describe, expect, it } from "bun:test";
-import { videoRouter } from "./video-router";
+import { server } from "../server";
 import {
   getAudioEncoders,
   getAudioFilters,
@@ -9,15 +9,14 @@ import {
   getVideoEncoders,
   getVideoFilters,
 } from "./video-utils";
-const app = videoRouter();
 
 describe("/process", () => {
   it("should process a video", async () => {
     const query = new URLSearchParams({
       format: "mp4",
     });
-    const response = await app.handle(
-      new Request(`http://localhost:3000/process?${query}`, {
+    const response = await server.fetch(
+      new Request(`http://localhost:3000/videos/process?${query}`, {
         method: "POST",
         body: Bun.file("fixtures/video.mp4"),
       })
@@ -34,14 +33,14 @@ describe("/process", () => {
     const query = new URLSearchParams({
       format: "mp4",
     });
-    const res1 = app.handle(
-      new Request(`http://localhost:3000/process?${query}`, {
+    const res1 = server.fetch(
+      new Request(`http://localhost:3000/videos/process?${query}`, {
         method: "POST",
         body: Bun.file("fixtures/video.mp4"),
       })
     );
-    const res2 = app.handle(
-      new Request(`http://localhost:3000/process?${query}`, {
+    const res2 = server.fetch(
+      new Request(`http://localhost:3000/videos/process?${query}`, {
         method: "POST",
         body: Bun.file("fixtures/video.mp4"),
       })
@@ -68,14 +67,14 @@ describe("/process", () => {
     const query = new URLSearchParams({
       format: "mp4",
     });
-    const r1 = app.handle(
-      new Request(`http://localhost:3000/process?${query}`, {
+    const r1 = server.fetch(
+      new Request(`http://localhost:3000/videos/process?${query}`, {
         method: "POST",
         body: Bun.file("fixtures/video.mp4"),
       })
     );
-    const r2 = app.handle(
-      new Request(`http://localhost:3000/process?${query}`, {
+    const r2 = server.fetch(
+      new Request(`http://localhost:3000/videos/process?${query}`, {
         method: "POST",
         body: Bun.file("fixtures/video.mp4"),
       })
@@ -97,8 +96,8 @@ describe("/process", () => {
       output: "/tmp/test-output.mp4",
     });
 
-    const response = await app.handle(
-      new Request(`http://localhost:3000/process?${query}`, {
+    const response = await server.fetch(
+      new Request(`http://localhost:3000/videos/process?${query}`, {
         method: "POST",
         body: Bun.file("fixtures/video.mp4"),
       })
@@ -114,8 +113,8 @@ describe("/process", () => {
   });
 
   it("should return 400 if no options are provided", async () => {
-    const response = await app.handle(
-      new Request(`http://localhost:3000/process`, {
+    const response = await server.fetch(
+      new Request(`http://localhost:3000/videos/process`, {
         method: "POST",
         body: Bun.file("fixtures/video.mp4"),
       })
@@ -126,8 +125,8 @@ describe("/process", () => {
   });
 
   it("should return 400 if options are invalid json", async () => {
-    const response = await app.handle(
-      new Request(`http://localhost:3000/process`, {
+    const response = await server.fetch(
+      new Request(`http://localhost:3000/videos/process`, {
         method: "POST",
         body: Bun.file("fixtures/video.mp4"),
         headers: { "X-Options": "{" },
@@ -139,8 +138,8 @@ describe("/process", () => {
   });
 
   it("should return 400 if options are invalid", async () => {
-    const response = await app.handle(
-      new Request(`http://localhost:3000/process`, {
+    const response = await server.fetch(
+      new Request(`http://localhost:3000/videos/process`, {
         method: "POST",
         body: Bun.file("fixtures/video.mp4"),
         headers: { "X-Options": JSON.stringify({ fps: "abc" }) },
@@ -148,14 +147,14 @@ describe("/process", () => {
     );
 
     expect(response.status).toBe(400);
-    expect(await response.text()).toEqual("[/fps] Expected union value");
+    expect(await response.text()).toEqual("[/fps] Expected number");
   });
 });
 
 describe("/videos/formats", () => {
   it("should return supported formats", async () => {
-    const response = await app.handle(
-      new Request("http://localhost:3000/formats")
+    const response = await server.fetch(
+      new Request("http://localhost:3000/videos/formats")
     );
     expect(response.status).toBe(200);
     const json = await response.json();
@@ -165,8 +164,8 @@ describe("/videos/formats", () => {
 
 describe("/videos/input-formats", () => {
   it("should return supported formats", async () => {
-    const response = await app.handle(
-      new Request("http://localhost:3000/input-formats")
+    const response = await server.fetch(
+      new Request("http://localhost:3000/videos/input-formats")
     );
     expect(response.status).toBe(200);
     const json = await response.json();
@@ -176,8 +175,8 @@ describe("/videos/input-formats", () => {
 
 describe("/videos/encoders", () => {
   it("should return supported encoders", async () => {
-    const response = await app.handle(
-      new Request("http://localhost:3000/encoders")
+    const response = await server.fetch(
+      new Request("http://localhost:3000/videos/encoders")
     );
     expect(response.status).toBe(200);
     const json = await response.json();
@@ -187,8 +186,8 @@ describe("/videos/encoders", () => {
 
 describe("/videos/filters", () => {
   it("should return supported filters", async () => {
-    const response = await app.handle(
-      new Request("http://localhost:3000/filters")
+    const response = await server.fetch(
+      new Request("http://localhost:3000/videos/filters")
     );
     expect(response.status).toBe(200);
     const json = await response.json();
@@ -198,8 +197,8 @@ describe("/videos/filters", () => {
 
 describe("/videos/audio-encoders", () => {
   it("should return supported audio encoders", async () => {
-    const response = await app.handle(
-      new Request("http://localhost:3000/audio-encoders")
+    const response = await server.fetch(
+      new Request("http://localhost:3000/videos/audio-encoders")
     );
     expect(response.status).toBe(200);
     const json = await response.json();
@@ -209,8 +208,8 @@ describe("/videos/audio-encoders", () => {
 
 describe("/videos/audio-filters", () => {
   it("should return supported audio filters", async () => {
-    const response = await app.handle(
-      new Request("http://localhost:3000/audio-filters")
+    const response = await server.fetch(
+      new Request("http://localhost:3000/videos/audio-filters")
     );
     expect(response.status).toBe(200);
     const json = await response.json();
