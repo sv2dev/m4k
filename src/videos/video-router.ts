@@ -5,17 +5,19 @@ import { extname } from "node:path";
 import { BOUNDARY, END, part } from "../util/multipart-mixed";
 import { parseOpts } from "../util/request-parsing";
 import {
-  audioEncoders,
-  audioFilters,
-  inputFormats,
   optimizeVideo,
   optionsSchema,
-  outputFormats,
-  videoEncoders,
-  videoFilters,
   videoQueue,
   type OptimizerOptions,
 } from "./video-optimizer";
+import {
+  getAudioEncoders,
+  getAudioFilters,
+  getInputFormats,
+  getOutputFormats,
+  getVideoEncoders,
+  getVideoFilters,
+} from "./video-utils";
 const compiledOptionsSchema = TypeCompiler.Compile(optionsSchema);
 
 export function videoRouter<Prefix extends string | undefined>(
@@ -92,10 +94,10 @@ export function videoRouter<Prefix extends string | undefined>(
         query: optionsSchema,
       }
     )
-    .get("/formats", () => outputFormats)
-    .get("/input-formats", () => inputFormats)
-    .get("/encoders", () => videoEncoders)
-    .get("/filters", () => videoFilters)
-    .get("/audio-encoders", () => audioEncoders)
-    .get("/audio-filters", () => audioFilters);
+    .get("/formats", () => getOutputFormats())
+    .get("/input-formats", () => getInputFormats())
+    .get("/encoders", () => getVideoEncoders())
+    .get("/filters", () => getVideoFilters())
+    .get("/audio-encoders", () => getAudioEncoders())
+    .get("/audio-filters", () => getAudioFilters());
 }

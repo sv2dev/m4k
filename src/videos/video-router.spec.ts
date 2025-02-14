@@ -1,15 +1,14 @@
 import { streamParts } from "@sv2dev/multipart-stream";
 import { describe, expect, it } from "bun:test";
-import {
-  audioEncoders,
-  audioFilters,
-  inputFormats,
-  outputFormats,
-  videoEncoders,
-  videoFilters,
-} from "./video-optimizer";
 import { videoRouter } from "./video-router";
-
+import {
+  getAudioEncoders,
+  getAudioFilters,
+  getInputFormats,
+  getOutputFormats,
+  getVideoEncoders,
+  getVideoFilters,
+} from "./video-utils";
 const app = videoRouter();
 
 describe("/process", () => {
@@ -160,7 +159,7 @@ describe("/videos/formats", () => {
     );
     expect(response.status).toBe(200);
     const json = await response.json();
-    expect(json).toEqual(outputFormats);
+    expect(json).toEqual(await getOutputFormats());
   });
 });
 
@@ -171,7 +170,7 @@ describe("/videos/input-formats", () => {
     );
     expect(response.status).toBe(200);
     const json = await response.json();
-    expect(json).toEqual(inputFormats);
+    expect(json).toEqual(await getInputFormats());
   });
 });
 
@@ -182,7 +181,7 @@ describe("/videos/encoders", () => {
     );
     expect(response.status).toBe(200);
     const json = await response.json();
-    expect(json).toEqual(videoEncoders);
+    expect(json).toEqual(await getVideoEncoders());
   });
 });
 
@@ -193,7 +192,7 @@ describe("/videos/filters", () => {
     );
     expect(response.status).toBe(200);
     const json = await response.json();
-    expect(json).toEqual(videoFilters);
+    expect(json).toEqual(await getVideoFilters());
   });
 });
 
@@ -204,7 +203,7 @@ describe("/videos/audio-encoders", () => {
     );
     expect(response.status).toBe(200);
     const json = await response.json();
-    expect(json).toEqual(audioEncoders);
+    expect(json).toEqual(await getAudioEncoders());
   });
 });
 
@@ -215,6 +214,6 @@ describe("/videos/audio-filters", () => {
     );
     expect(response.status).toBe(200);
     const json = await response.json();
-    expect(json).toEqual(audioFilters);
+    expect(json).toEqual(await getAudioFilters());
   });
 });
