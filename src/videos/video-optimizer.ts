@@ -8,6 +8,7 @@ export const optionsSchema = T.Object({
   audioFilters: T.Optional(T.String()),
   autopad: T.Optional(T.Union([T.Boolean(), T.String()])),
   aspect: T.Optional(T.Union([T.String(), T.Number()])),
+  inputFormat: T.Optional(T.String()),
   format: T.Optional(T.String()),
   fps: T.Optional(T.Number()),
   output: T.Optional(T.String()),
@@ -22,7 +23,7 @@ export const optionsSchema = T.Object({
 
 export type OptimizerOptions = StaticDecode<typeof optionsSchema>;
 
-const extensionMap: Record<string, string> = {
+const extMap: Record<string, string> = {
   matroska: "mkv",
 };
 
@@ -31,11 +32,18 @@ export async function optimizeVideo(
   input: ReadableStream
 ) {
   const uuid = Bun.randomUUIDv7("base64url");
-  const outPath =
-    opts.output ?? `/tmp/output-${uuid}.${extensionMap[opts.format!] ?? "mp4"}`;
-  const inputPath = `/tmp/input-${uuid}.mov`;
+  const inputFormat = extMap[opts.inputFormat!] ?? opts.inputFormat ?? "mp4";
+  const outputFormat = extMap[opts.format!] ?? opts.format ?? "mp4";
+  const outPath = opts.output ?? `/tmp/output-${uuid}.${outputFormat}`;
+  const inputPath = `/tmp/input-${uuid}.${inputFormat}`;
   try {
-    await Bun.write(inputPath, await Bun.readableStreamToArrayBuffer(input));
+    const file = Bun.file(inputPath);
+    const writer = file.writer();
+    for await (const chunk of input as unknown as AsyncIterable<Uint8Array>) {
+      writer.write(chunk);
+    }
+    await writer.flush();
+
     const proc = Bun.spawn(
       [
         ffmpegPath,
