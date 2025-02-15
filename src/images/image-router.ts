@@ -1,8 +1,7 @@
 import { Type as T, type StaticDecode } from "@sinclair/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
-import { MultipartMixed } from "../util/multipart-mixed";
 import { parseOpts } from "../util/request-parsing";
-import { error, stream } from "../util/response";
+import { error, queueAndStream } from "../util/response";
 import { numberQueryParamSchema } from "../util/typebox";
 import {
   createOptimizer,
@@ -41,12 +40,7 @@ export async function processImages(request: Request) {
   if (optsArr.length === 0) {
     return error(400, "No options provided");
   }
-  if (imageQueue.size === imageQueue.max) {
-    return error(503, "Queue is full");
-  }
-  const multipart = new MultipartMixed();
-
-  const iterable = imageQueue.pushAndIterate(async () => {
+  return queueAndStream(imageQueue, async (multipart) => {
     const fileStreams = [] as ReadableStream<Uint8Array>[];
     const optimizer = createOptimizer(request.body!);
     for (const opts of optsArr) {
@@ -66,18 +60,7 @@ export async function processImages(request: Request) {
         await multipart.write(value);
       }
     }
-    await multipart.end();
-  })!;
-  streamQueuePosition();
-  return stream(multipart.stream);
-
-  async function streamQueuePosition() {
-    for await (const [position] of iterable) {
-      if (position) {
-        multipart.part({ payload: { position } });
-      }
-    }
-  }
+  });
 }
 
 function queryToOptions({

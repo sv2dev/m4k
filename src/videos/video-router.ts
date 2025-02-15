@@ -1,8 +1,7 @@
 import { TypeCompiler } from "@sinclair/typebox/compiler";
 import { extname } from "node:path";
-import { MultipartMixed } from "../util/multipart-mixed";
 import { parseOpts } from "../util/request-parsing";
-import { error, json, stream } from "../util/response";
+import { error, json, queueAndStream } from "../util/response";
 import {
   optimizeVideo,
   optionsSchema,
@@ -30,13 +29,9 @@ export async function processVideo(request: Request) {
   if (!opts) {
     return error(400, "No options provided");
   }
-  if (videoQueue.size === videoQueue.max) {
-    return error(503, "Queue is full");
-  }
-  const multipart = new MultipartMixed();
-  const iterable = videoQueue.pushAndIterate(async () => {
+  return queueAndStream(videoQueue, async (multipart) => {
     const video = await optimizeVideo(opts, request.body!);
-    if (!video) return await multipart.end();
+    if (!video) return;
     await multipart.part({
       contentType: video.type,
       filename: `video${extname(video.name!)}`,
@@ -54,18 +49,7 @@ export async function processVideo(request: Request) {
     } catch (error) {
       console.warn("Cleanup failed:", error);
     }
-    await multipart.end();
-  })!;
-  streamQueuePosition();
-  return stream(multipart.stream);
-
-  async function streamQueuePosition() {
-    for await (const [position] of iterable) {
-      if (position) {
-        multipart.part({ payload: { position } });
-      }
-    }
-  }
+  });
 }
 
 export async function getSupportedVideoEncoders() {
