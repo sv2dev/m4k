@@ -1,84 +1,28 @@
 import { Type as T, type StaticDecode } from "@sinclair/typebox";
 import { Queue } from "@sv2dev/queue";
-import ffmpeg from "fluent-ffmpeg";
-import { promisify } from "node:util";
-
-const ffmpegPath =
-  Bun.env.FFMPEG_PATH ?? (await import("@ffmpeg-installer/ffmpeg")).path;
-ffmpeg.setFfmpegPath(ffmpegPath);
-
-const [formats, encoders, filters] = await Promise.all([
-  promisify(ffmpeg.getAvailableFormats)(),
-  promisify(ffmpeg.getAvailableEncoders)(),
-  promisify(ffmpeg.getAvailableFilters)(),
-]);
-
-export const audioEncoders = Object.entries(encoders)
-  .filter(([_, e]) => e.type === "audio")
-  .reduce(
-    (acc, [name, { description }]) => ({ ...acc, [name]: description }),
-    {}
-  );
-export const videoEncoders = Object.entries(encoders)
-  .filter(([_, e]) => e.type === "video")
-  .reduce(
-    (acc, [name, { description }]) => ({ ...acc, [name]: description }),
-    {}
-  );
-export const audioFilters = Object.entries(filters)
-  .filter(([_, f]) => f.output === "audio")
-  .reduce(
-    (acc, [name, { description }]) => ({ ...acc, [name]: description }),
-    {}
-  );
-export const videoFilters = Object.entries(filters)
-  .filter(([_, f]) => f.output === "video")
-  .reduce(
-    (acc, [name, { description }]) => ({ ...acc, [name]: description }),
-    {}
-  );
-export const inputFormats = Object.keys(formats).reduce(
-  (acc, f) =>
-    formats[f].canDemux ? { ...acc, [f]: formats[f].description } : acc,
-  {}
-);
-export const outputFormats = Object.keys(formats).reduce(
-  (acc, f) =>
-    formats[f].canMux ? { ...acc, [f]: formats[f].description } : acc,
-  {}
-);
+import { ffmpegPath } from "./video-utils";
 
 export const optionsSchema = T.Object({
   audioBitrate: T.Optional(T.Union([T.String(), T.Number()])),
-  audioCodec: T.Optional(
-    T.Union(Object.keys(audioEncoders).map((e) => T.Literal(e)))
-  ),
-  audioFilters: T.Optional(
-    T.Union(Object.keys(audioFilters).map((f) => T.Literal(f)))
-  ),
+  audioCodec: T.Optional(T.String()),
+  audioFilters: T.Optional(T.String()),
   autopad: T.Optional(T.Union([T.Boolean(), T.String()])),
   aspect: T.Optional(T.Union([T.String(), T.Number()])),
-  format: T.Optional(
-    T.Union(Object.keys(outputFormats).map((f) => T.Literal(f)))
-  ),
+  format: T.Optional(T.String()),
   fps: T.Optional(T.Number()),
   output: T.Optional(T.String()),
   seek: T.Optional(T.Union([T.String(), T.Number()])),
   size: T.Optional(T.Union([T.String()])),
   videoBitrate: T.Optional(T.Union([T.String(), T.Number()])),
   videoBitrateConstant: T.Optional(T.Boolean()),
-  videoCodec: T.Optional(
-    T.Union(Object.keys(videoEncoders).map((e) => T.Literal(e)))
-  ),
-  videoFilters: T.Optional(
-    T.Union(Object.keys(videoFilters).map((f) => T.Literal(f)))
-  ),
+  videoCodec: T.Optional(T.String()),
+  videoFilters: T.Optional(T.String()),
   options: T.Optional(T.String()),
 });
 
 export type OptimizerOptions = StaticDecode<typeof optionsSchema>;
 
-const extensionMap = {
+const extensionMap: Record<string, string> = {
   matroska: "mkv",
 };
 

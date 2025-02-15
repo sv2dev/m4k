@@ -11,6 +11,8 @@ RUN bun install --production
 
 FROM oven/bun:1.2.2-slim AS prod
 ENV NODE_ENV=production \
+    PORT=3000 \
+    HOSTNAME=0.0.0.0 \
     FFMPEG_PATH=/usr/local/bin/ffmpeg
 WORKDIR /app
 COPY --from=mwader/static-ffmpeg:7.1 /ffmpeg /usr/local/bin/
