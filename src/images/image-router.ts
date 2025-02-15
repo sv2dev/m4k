@@ -1,8 +1,8 @@
 import { Type as T, type StaticDecode } from "@sinclair/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
-import { BOUNDARY, END, part } from "../util/multipart-mixed";
+import { MultipartMixed } from "../util/multipart-mixed";
 import { parseOpts } from "../util/request-parsing";
-import { error } from "../util/response";
+import { error, stream } from "../util/response";
 import { numberQueryParamSchema } from "../util/typebox";
 import {
   createOptimizer,
@@ -32,9 +32,6 @@ const querySchema = T.Object({
 const compiledOptionsSchema = TypeCompiler.Compile(optionsSchema);
 
 export async function processImages(request: Request) {
-  if (imageQueue.size === imageQueue.max) {
-    return error(503, "Queue is full");
-  }
   let optsArr: OptimizerOptions[];
   try {
     optsArr = parseOpts(request, compiledOptionsSchema, queryToOptions);
@@ -44,9 +41,10 @@ export async function processImages(request: Request) {
   if (optsArr.length === 0) {
     return error(400, "No options provided");
   }
-  const { readable, writable } = new TransformStream<Uint8Array>();
-  const writer = writable.getWriter();
-  let first = true;
+  if (imageQueue.size === imageQueue.max) {
+    return error(503, "Queue is full");
+  }
+  const multipart = new MultipartMixed();
 
   const iterable = imageQueue.pushAndIterate(async () => {
     const fileStreams = [] as ReadableStream<Uint8Array>[];
@@ -60,31 +58,23 @@ export async function processImages(request: Request) {
       const name = `file${i + 1}`;
       const filename = `${name}.${format}`;
       const contentType = Bun.file(filename).type;
-      writer.write(part({ first, filename, contentType }));
-      first = false;
+      await multipart.part({ filename, contentType });
       const reader = fileStreams[i].getReader();
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
-        writer.write(value);
+        await multipart.write(value);
       }
-      await writer.write(END);
     }
+    await multipart.end();
   })!;
   streamQueuePosition();
-  return new Response(readable, {
-    headers: {
-      "content-type": `multipart/mixed; boundary="${BOUNDARY}"`,
-      "transfer-encoding": "chunked",
-    },
-  });
+  return stream(multipart.stream);
 
   async function streamQueuePosition() {
     for await (const [position] of iterable) {
-      if (position === null) writer.close();
-      else if (position > 0) {
-        writer.write(part({ first, payload: { position } }));
-        first = false;
+      if (position) {
+        multipart.part({ payload: { position } });
       }
     }
   }

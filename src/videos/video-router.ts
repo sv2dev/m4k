@@ -1,8 +1,8 @@
 import { TypeCompiler } from "@sinclair/typebox/compiler";
 import { extname } from "node:path";
-import { BOUNDARY, END, part } from "../util/multipart-mixed";
+import { MultipartMixed } from "../util/multipart-mixed";
 import { parseOpts } from "../util/request-parsing";
-import { error, json } from "../util/response";
+import { error, json, stream } from "../util/response";
 import {
   optimizeVideo,
   optionsSchema,
@@ -21,9 +21,6 @@ import {
 const compiledOptionsSchema = TypeCompiler.Compile(optionsSchema);
 
 export async function processVideo(request: Request) {
-  if (videoQueue.size === videoQueue.max) {
-    return error(503, "Queue is full");
-  }
   let opts: OptimizerOptions | undefined;
   try {
     [opts] = parseOpts(request, compiledOptionsSchema);
@@ -33,52 +30,39 @@ export async function processVideo(request: Request) {
   if (!opts) {
     return error(400, "No options provided");
   }
-  const { readable, writable } = new TransformStream();
-  const writer = writable.getWriter();
-  let first = true;
+  if (videoQueue.size === videoQueue.max) {
+    return error(503, "Queue is full");
+  }
+  const multipart = new MultipartMixed();
   const iterable = videoQueue.pushAndIterate(async () => {
     const video = await optimizeVideo(opts, request.body!);
-    if (!video) {
-      writer.write(END);
-      writer.close();
-      return;
+    if (!video) return await multipart.end();
+    await multipart.part({
+      contentType: video.type,
+      filename: `video${extname(video.name!)}`,
+    });
+    try {
+      for await (const chunk of video.stream() as unknown as AsyncIterable<Uint8Array>) {
+        await multipart.write(chunk);
+      }
+    } catch (error) {
+      console.error("Error streaming video:", error);
+      await multipart.part({ payload: { error: (error as Error).message } });
     }
-    writer.write(
-      part({
-        first: first,
-        contentType: video.type,
-        filename: `video${extname(video.name!)}`,
-      })
-    );
-    first = false;
-    writer.releaseLock();
-    await video
-      .stream()
-      .pipeTo(writable, { preventClose: true })
-      .then(async () => {
-        try {
-          await video.unlink();
-        } catch (error) {
-          console.error("Cleanup failed:", error);
-        }
-      });
-    const w = writable.getWriter();
-    w.write(END);
-    w.close();
+    try {
+      await video.unlink();
+    } catch (error) {
+      console.warn("Cleanup failed:", error);
+    }
+    await multipart.end();
   })!;
   streamQueuePosition();
-  return new Response(readable, {
-    headers: {
-      "content-type": `multipart/mixed; boundary="${BOUNDARY}"`,
-      "transfer-encoding": "chunked",
-    },
-  });
+  return stream(multipart.stream);
 
   async function streamQueuePosition() {
     for await (const [position] of iterable) {
-      if (position !== null && position > 0) {
-        writer.write(part({ first, payload: { position } }));
-        first = false;
+      if (position) {
+        multipart.part({ payload: { position } });
       }
     }
   }
