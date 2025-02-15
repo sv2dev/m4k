@@ -2,7 +2,7 @@
   "name": "@sv2dev/media-optimizer",
   "module": "./index.ts",
   "type": "module",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "main": "./index.ts",
   "scripts": {
     "dev": "bun --watch src/server.ts",
