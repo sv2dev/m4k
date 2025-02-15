@@ -10,7 +10,7 @@ import {
   processVideo,
 } from "./videos/video-router";
 
-const server = Bun.serve({
+export const server = Bun.serve({
   fetch: async (req, server) => {
     const { pathname } = new URL(req.url);
     try {
