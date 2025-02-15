@@ -5,8 +5,8 @@
   "version": "0.0.1",
   "main": "./index.ts",
   "scripts": {
-    "dev": "bun --watch entrypoint.ts",
-    "build": "bun build ./entrypoint.ts --outfile dist/app.js --target bun",
+    "dev": "bun --watch src/server.ts",
+    "build": "bun build ./src/server.ts --outfile dist/app.js --target bun",
     "build-types": "tsc",
     "typecheck": "tsc --noEmit"
   },

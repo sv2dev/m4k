@@ -10,7 +10,7 @@ import {
   processVideo,
 } from "./videos/video-router";
 
-export const server = Bun.serve({
+const server = Bun.serve({
   fetch: async (req, server) => {
     const { pathname } = new URL(req.url);
     try {
@@ -25,6 +25,8 @@ export const server = Bun.serve({
       return new Response("Internal server error", { status: 500 });
     }
   },
+  hostname: Bun.env.HOSTNAME,
+  port: Bun.env.PORT,
 });
 
 const routes = {
@@ -51,3 +53,5 @@ const routes = {
     >
   >
 >;
+
+console.log(`Server is running on ${server.hostname}:${server.port}`);
