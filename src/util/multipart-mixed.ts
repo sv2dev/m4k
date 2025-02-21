@@ -45,19 +45,24 @@ export class MultipartMixed {
       }`,
     ];
 
+    const first = this.#first;
     this.#first = false;
-    await this.#writer.write(
-      textEncoder.encode(`${this.#first ? "" : LB}${lines.join(LB)}`)
+    await this.#write(
+      textEncoder.encode(`${first ? "" : LB}${lines.join(LB)}`)
     );
   }
 
   async write(chunk: Uint8Array) {
-    await this.#writer.write(chunk);
+    await this.#write(chunk);
   }
 
   async end() {
-    await this.#writer.write(END);
+    await this.#write(END);
     this.#writer.close();
+  }
+
+  async #write(chunk: Uint8Array) {
+    await this.#writer.write(chunk);
   }
 }
 

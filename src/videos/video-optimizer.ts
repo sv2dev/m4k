@@ -1,6 +1,7 @@
 import { Type as T, type StaticDecode } from "@sinclair/typebox";
 import { Queue } from "@sv2dev/queue";
-import { ffmpegPath } from "./video-utils";
+import { spawn, type BunFile } from "bun";
+import { ffmpeg } from "./video-utils";
 
 export const optionsSchema = T.Object({
   audioBitrate: T.Optional(T.Union([T.String(), T.Number()])),
@@ -21,53 +22,85 @@ export const optionsSchema = T.Object({
   options: T.Optional(T.String()),
 });
 
-export type OptimizerOptions = StaticDecode<typeof optionsSchema>;
+export type VideoOptimizerOptions = StaticDecode<typeof optionsSchema>;
 
-const extMap: Record<string, string> = {
+export const extMap: Record<string, string> = {
   matroska: "mkv",
 };
 
-export async function optimizeVideo(
-  opts: OptimizerOptions,
-  input: ReadableStream
+export async function* optimizeVideo(
+  opts: VideoOptimizerOptions,
+  input: BunFile,
+  abortSignal?: AbortSignal
 ) {
-  const uuid = Bun.randomUUIDv7("base64url");
-  const inputFormat = extMap[opts.inputFormat!] ?? opts.inputFormat ?? "mp4";
-  const outputFormat = extMap[opts.format!] ?? opts.format ?? "mp4";
-  const outPath = opts.output ?? `/tmp/output-${uuid}.${outputFormat}`;
-  const inputPath = `/tmp/input-${uuid}.${inputFormat}`;
-  try {
-    const file = Bun.file(inputPath);
-    const writer = file.writer();
-    for await (const chunk of input as unknown as AsyncIterable<Uint8Array>) {
-      writer.write(chunk);
+  const output = Bun.file(
+    opts.output ?? input.name!.replace("input", "output")
+  );
+
+  const vc = opts.videoCodec ?? "copy";
+  const ac = opts.audioCodec ?? "copy";
+
+  const child = spawn(
+    [
+      ffmpeg,
+      "-y",
+      "-i",
+      input.name!,
+      ...(ac ? ["-c:a", ac] : []),
+      ...(vc ? ["-c:v", vc] : []),
+      output.name!,
+    ],
+    { stderr: "pipe", signal: abortSignal }
+  );
+  const decoder = new TextDecoder();
+
+  let metadataStr = "";
+  let duration: number | null = null;
+  let progress = 0;
+  for await (const chunk of child.stderr as any as AsyncIterable<Uint8Array>) {
+    const str = decoder.decode(chunk);
+    if (duration === null) {
+      metadataStr += str;
+      duration = parseDuration(metadataStr);
+      if (duration === null) {
+        metadataStr = str.slice(-30);
+        continue;
+      }
+      yield { progress };
+      continue;
     }
-    await writer.flush();
-
-    const proc = Bun.spawn(
-      [
-        ffmpegPath,
-        "-y",
-        "-i",
-        inputPath,
-        "-c:v",
-        opts.videoCodec ?? "copy",
-        "-c:a",
-        opts.audioCodec ?? "copy",
-        outPath,
-      ],
-      { stderr: "pipe" }
-    );
-    const out = Bun.readableStreamToText(proc.stderr);
-
-    const code = await proc.exited;
-    if (code !== 0)
-      throw new Error(`ffmpeg exited with code ${code}\n${await out}`);
-  } finally {
-    await Bun.file(inputPath).unlink();
+    const match = str.match(/time=(\S+)/);
+    if (match) {
+      const time = durationToMs(match[1]);
+      const p = Math.floor((time / duration) * 100);
+      if (p !== progress) {
+        progress = p;
+        yield { progress };
+      }
+    }
   }
 
-  if (!opts.output) return Bun.file(outPath);
+  const code = await child.exited;
+  if (code !== 0) {
+    throw new Error(`ffmpeg exited with code ${code}`);
+  }
+
+  if (!opts.output) {
+    yield output;
+    await output.unlink();
+  }
+}
+
+function parseDuration(metadataStr: string) {
+  const match = metadataStr.match(/Duration: (\d+:\d+:\d+\.\d+)/);
+  if (!match) return null;
+  return durationToMs(match[1]);
+}
+
+function durationToMs(duration: string) {
+  const [, hours, minutes, seconds, centiseconds] =
+    duration.match(/(\d+):(\d+):(\d+)\.(\d+)/)?.map(Number) ?? [];
+  return (((hours * 60 + minutes) * 60 + seconds) * 100 + centiseconds) * 10;
 }
 
 export const videoQueue = new Queue({

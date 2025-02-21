@@ -1,16 +1,17 @@
 import { TypeCompiler } from "@sinclair/typebox/compiler";
-import { extname } from "node:path";
+import { basename } from "node:path";
 import { parseOpts } from "../util/request-parsing";
 import { error, json, queueAndStream } from "../util/response";
 import {
   optimizeVideo,
   optionsSchema,
   videoQueue,
-  type OptimizerOptions,
+  type VideoOptimizerOptions,
 } from "./video-optimizer";
 import {
   getAudioEncoders,
   getAudioFilters,
+  getExtension,
   getInputFormats,
   getOutputFormats,
   getVideoEncoders,
@@ -20,7 +21,7 @@ import {
 const compiledOptionsSchema = TypeCompiler.Compile(optionsSchema);
 
 export async function processVideo(request: Request) {
-  let opts: OptimizerOptions | undefined;
+  let opts: VideoOptimizerOptions | undefined;
   try {
     [opts] = parseOpts(request, compiledOptionsSchema);
   } catch (err) {
@@ -29,27 +30,41 @@ export async function processVideo(request: Request) {
   if (!opts) {
     return error(400, "No options provided");
   }
-  return queueAndStream(videoQueue, async (multipart) => {
-    const video = await optimizeVideo(opts, request.body!);
-    if (!video) return;
-    await multipart.part({
-      contentType: video.type,
-      filename: `video${extname(video.name!)}`,
-    });
-    try {
-      for await (const chunk of video.stream() as unknown as AsyncIterable<Uint8Array>) {
-        await multipart.write(chunk);
+  const inputFile = Bun.file(
+    `/tmp/input-${Bun.randomUUIDv7("base64url")}.${getExtension(
+      opts.inputFormat ?? "mp4"
+    )}`
+  );
+  return queueAndStream(
+    videoQueue,
+    async (multipart) => {
+      try {
+        for await (const x of optimizeVideo(opts, inputFile, request.signal)) {
+          if ("progress" in x) {
+            await multipart.part({ payload: x });
+          } else {
+            await multipart.part({
+              contentType: x.type,
+              filename: basename(x.name!),
+            });
+            for await (const chunk of x.stream() as unknown as AsyncIterable<Uint8Array>) {
+              await multipart.write(chunk);
+            }
+          }
+        }
+      } finally {
+        await inputFile.unlink();
       }
-    } catch (error) {
-      console.error("Error streaming video:", error);
-      await multipart.part({ payload: { error: (error as Error).message } });
+    },
+    async () => {
+      const writer = inputFile.writer();
+      for await (const chunk of request.body as unknown as AsyncIterable<Uint8Array>) {
+        writer.write(chunk);
+        await writer.flush();
+      }
+      await writer.end();
     }
-    try {
-      await video.unlink();
-    } catch (error) {
-      console.warn("Cleanup failed:", error);
-    }
-  });
+  );
 }
 
 export async function getSupportedVideoEncoders() {

@@ -20,16 +20,31 @@ export function stream(readable: ReadableStream) {
   });
 }
 
-export function queueAndStream(
+export async function queueAndStream(
   queue: Queue,
-  task: (multipart: MultipartMixed) => Promise<void>
+  task: (multipart: MultipartMixed) => Promise<void>,
+  prepare?: (multipart: MultipartMixed) => Promise<void>,
+  abortSignal?: AbortSignal
 ) {
   const multipart = new MultipartMixed();
+  let preparing: Promise<void> | undefined;
   const iterable = queue.pushAndIterate(async () => {
-    await task(multipart);
-    await multipart.end();
+    await preparing;
+    try {
+      await task(multipart);
+    } catch (err) {
+      // err can be undefined, if the connection was aborted
+      if (err) multipart.part({ payload: { error: (err as Error).message } });
+    }
+    if (!abortSignal || !abortSignal.aborted) {
+      await multipart.end();
+    }
   });
   if (!iterable) error(503, "Queue is full");
+  if (prepare) {
+    preparing = prepare(multipart);
+    await preparing;
+  }
   streamQueuePosition();
   return stream(multipart.stream);
 
@@ -37,11 +52,12 @@ export function queueAndStream(
     const { reset, clear } = idle(() => {
       multipart.part({ payload: "keepalive" });
     }, KEEP_ALIVE_INTERVAL);
+    abortSignal?.addEventListener("abort", clear);
     for await (const [position] of iterable!) {
       if (position) {
         reset();
         multipart.part({ payload: { position } });
-      } else if (position === 0) {
+      } else {
         clear();
       }
     }

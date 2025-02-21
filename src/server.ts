@@ -11,6 +11,7 @@ import {
 } from "./videos/video-router";
 
 export const server = Bun.serve({
+  maxRequestBodySize: 2 ** 40, // 1TB
   fetch: async (req, server) => {
     const { pathname } = new URL(req.url);
     try {
@@ -27,6 +28,7 @@ export const server = Bun.serve({
   },
   hostname: Bun.env.HOSTNAME,
   port: Bun.env.PORT,
+  idleTimeout: 180, // 3 minutes
 });
 
 const routes = {
