@@ -92,12 +92,12 @@ export function optimizeVideo(
     }
   }, signal);
   if (!iterable) return null;
-  return async function* () {
+  return (async function* () {
     for await (const [position, value] of iterable) {
       if (position !== null) yield { position };
       else yield value;
     }
-  };
+  })();
 }
 
 function parseDuration(metadataStr: string) {

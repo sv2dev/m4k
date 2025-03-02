@@ -4,7 +4,7 @@ import { parseOpts } from "../util/request-parsing";
 import { error, queueAndStream } from "../util/response";
 import { numberQueryParamSchema } from "../util/typebox";
 import {
-  otpimizeImage as optimizeImage,
+  optimizeImage,
   optionsSchema,
   type ImageOptimizerOptions,
 } from "./image-optimizer";
@@ -37,9 +37,9 @@ export async function processImages(request: Request) {
   }
   if (optsArr.length === 0) return error(400, "No options provided");
   if (!request.body) return error(400, "No body provided");
-  const generator = optimizeImage(request.body, optsArr, request.signal);
-  if (!generator) return error(409, "Queue is full");
-  return queueAndStream(generator());
+  const iterable = optimizeImage(request.body, optsArr, request.signal);
+  if (!iterable) return error(409, "Queue is full");
+  return queueAndStream(iterable);
 }
 
 function queryToOptions({

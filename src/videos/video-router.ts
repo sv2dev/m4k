@@ -37,13 +37,13 @@ export async function processVideo(request: Request) {
     await writer.flush();
   }
   await writer.end();
-  const generator = optimizeVideo(inputFile, opts, request.signal);
-  if (!generator) return error(409, "Queue is full");
+  const iterable = optimizeVideo(inputFile, opts, request.signal);
+  if (!iterable) return error(409, "Queue is full");
 
   return queueAndStream(
     (async function* () {
       try {
-        yield* generator();
+        yield* iterable;
       } finally {
         await inputFile.unlink();
       }

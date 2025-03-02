@@ -60,13 +60,14 @@ export type ImageOptimizerOptions = StaticDecode<typeof optionsSchema>;
 export type Format = Required<ImageOptimizerOptions>["format"];
 export type Fit = Required<Required<ImageOptimizerOptions>["resize"]>["fit"];
 
-export function otpimizeImage(
+export function optimizeImage(
   input: ReadableStream | Blob,
-  opts: ImageOptimizerOptions[],
+  opts: ImageOptimizerOptions | ImageOptimizerOptions[],
   signal?: AbortSignal
 ) {
   const sharpInstance = sharp().rotate();
   const iterable = imageQueue.iterate(async function* () {
+    opts = Array.isArray(opts) ? opts : [opts];
     readableFromWeb("stream" in input ? input.stream() : input).pipe(
       sharpInstance
     );
@@ -121,12 +122,12 @@ export function otpimizeImage(
     }
   }, signal);
   if (!iterable) return null;
-  return async function* () {
+  return (async function* () {
     for await (const [position, value] of iterable) {
       if (position !== null) yield { position };
       else yield value;
     }
-  };
+  })();
 }
 
 const imageQueue = createQueue({
