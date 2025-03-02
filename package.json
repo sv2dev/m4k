@@ -14,7 +14,7 @@
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@sinclair/typebox": "^0.34.14",
     "@sv2dev/multipart-stream": "^0.2.0",
-    "@types/bun": "latest",
+    "@types/bun": "^1.2.4",
     "tasque": "^0.1.2",
     "typescript": "^5.0.0"
   },
