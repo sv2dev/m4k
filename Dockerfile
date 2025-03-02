@@ -1,15 +1,15 @@
-FROM oven/bun:1.2.2-slim AS build
+FROM oven/bun:1.2.4-slim AS build
 WORKDIR /app
 COPY . .
 RUN bun install && bun run build
 
-FROM oven/bun:1.2.2-slim AS install
+FROM oven/bun:1.2.4-slim AS install
 ENV NODE_ENV=production
 WORKDIR /app
 COPY ./package.json bun.lock /app/
 RUN bun install --production
 
-FROM oven/bun:1.2.2-slim AS prod
+FROM oven/bun:1.2.4-slim AS prod
 ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0 \

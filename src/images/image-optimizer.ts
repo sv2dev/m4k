@@ -1,6 +1,7 @@
 import { Type as T, type StaticDecode } from "@sinclair/typebox";
-import { Queue } from "@sv2dev/queue";
-import sharp, { type Sharp } from "sharp";
+import sharp from "sharp";
+import { createQueue } from "tasque";
+import { VirtualFile } from "../util/file";
 import { readableFromWeb, readableToWeb } from "../util/streams";
 import { numberQueryParamSchema } from "../util/typebox";
 
@@ -55,50 +56,81 @@ export const optionsSchema = T.Object({
   ),
 });
 
-export type OptimizerOptions = StaticDecode<typeof optionsSchema>;
-export type Format = Required<OptimizerOptions>["format"];
-export type Fit = Required<Required<OptimizerOptions>["resize"]>["fit"];
+export type ImageOptimizerOptions = StaticDecode<typeof optionsSchema>;
+export type Format = Required<ImageOptimizerOptions>["format"];
+export type Fit = Required<Required<ImageOptimizerOptions>["resize"]>["fit"];
 
-export function createOptimizer(input: ReadableStream) {
-  const s = sharp().rotate();
-  return readableFromWeb(input).pipe(s);
-}
-
-export function otpimizeImage(
-  s: Sharp,
-  {
-    rotate,
-    resize,
-    format = "avif",
-    quality,
-    keepMetadata = false,
-    keepExif = false,
-    keepIcc = false,
-    colorspace,
-    crop,
-  }: OptimizerOptions
+export function optimizeImage(
+  input: ReadableStream | Blob,
+  opts: ImageOptimizerOptions | ImageOptimizerOptions[],
+  signal?: AbortSignal
 ) {
-  if (rotate) s = s.rotate(rotate);
-  if (resize)
-    s = s.resize({
-      ...resize,
-      fit: resize.fit ?? "inside",
-    });
-  if (keepMetadata) s = s.keepMetadata();
-  if (keepExif) s = s.keepExif();
-  if (keepIcc) s = s.keepIccProfile();
-  if (colorspace) s = s.toColorspace(colorspace);
-  if (crop) {
-    s = s.extract({
-      ...crop,
-      left: crop.left ?? 0,
-      top: crop.top ?? 0,
-    });
-  }
-  return readableToWeb(s.toFormat(format, { quality }));
+  const sharpInstance = sharp().rotate();
+  const iterable = imageQueue.iterate(async function* () {
+    opts = Array.isArray(opts) ? opts : [opts];
+    readableFromWeb("stream" in input ? input.stream() : input).pipe(
+      sharpInstance
+    );
+    const files = await Promise.all(
+      opts.map(
+        async (
+          {
+            colorspace,
+            crop,
+            format = "avif",
+            keepExif,
+            keepIcc,
+            keepMetadata,
+            quality,
+            resize,
+            rotate,
+          },
+          idx
+        ) => {
+          let s = sharpInstance.clone();
+          if (rotate) s = s.rotate(rotate);
+          if (resize)
+            s = s.resize({
+              ...resize,
+              fit: resize.fit ?? "inside",
+            });
+          if (keepMetadata) s = s.keepMetadata();
+          if (keepExif) s = s.keepExif();
+          if (keepIcc) s = s.keepIccProfile();
+          if (colorspace) s = s.toColorspace(colorspace);
+          if (crop) {
+            s = s.extract({
+              ...crop,
+              left: crop.left ?? 0,
+              top: crop.top ?? 0,
+            });
+          }
+          s = s.toFormat(format, { quality });
+          return new VirtualFile(readableToWeb(s), {
+            type: `image/${format}`,
+            name: `file${idx + 1}.${format}`,
+          });
+        }
+      )
+    );
+    let done = 0;
+    yield { progress: 0 };
+    for (const file of files) {
+      yield file;
+      done++;
+      yield { progress: Math.round((done / files.length) * 100) };
+    }
+  }, signal);
+  if (!iterable) return null;
+  return (async function* () {
+    for await (const [position, value] of iterable) {
+      if (position !== null) yield { position };
+      else yield value;
+    }
+  })();
 }
 
-export const imageQueue = new Queue({
+const imageQueue = createQueue({
   parallelize: Number(Bun.env.IMAGE_PARALLELIZE ?? 5),
   max: Number(Bun.env.IMAGE_QUEUE_SIZE ?? 100),
 });

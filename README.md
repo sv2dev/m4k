@@ -7,7 +7,7 @@ The docker image is available at [ghcr.io/sv2dev/media-optimizer](https://github
 ## Usage
 
 ```bash
-docker run -p 3000:3000 -v $(pwd)/output:/output ghcr.io/sv2dev/media-optimizer:0.0.1
+docker run -p 3000:3000 -v $(pwd)/output:/output ghcr.io/sv2dev/media-optimizer:0.0.3
 ```
 
 ## API

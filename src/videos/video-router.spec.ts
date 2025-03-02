@@ -1,6 +1,7 @@
 import { streamParts } from "@sv2dev/multipart-stream";
 import { describe, expect, it } from "bun:test";
 import { server } from "../server";
+import type { ProcessingError, Progress, QueuePosition } from "../types";
 import {
   getAudioEncoders,
   getAudioFilters,
@@ -23,10 +24,12 @@ describe("/process", () => {
     );
 
     expect(response.status).toBe(200);
-    const [, video] = await Array.fromAsync(streamParts(response));
+    const collected = await collectResponse(response);
 
-    expect(video.filename).toBe("video.mp4");
-    expect((await video.bytes()).length).toBeGreaterThan(1000);
+    const videoInfo = collected.find((x) => "type" in x)!;
+    expect(videoInfo.filename).toEqual(expect.stringContaining(".mp4"));
+    expect(videoInfo.type).toEqual("video/mp4");
+    expect(videoInfo.size).toBeGreaterThan(1000);
   });
 
   it("should process multiple videos in sequence", async () => {
@@ -49,45 +52,41 @@ describe("/process", () => {
     const [response1, response2] = await Promise.all([res1, res2]);
 
     expect(response1.status).toBe(200);
-    const [, video1] = await Array.fromAsync(streamParts(response1));
-    expect(video1.filename).toBe("video.mp4");
-    expect((await video1.bytes()).length).toBeGreaterThan(1000);
+    const video1 = (await collectResponse(response1)).find((x) => "type" in x)!;
+    expect(video1.filename).toMatch(/\.mp4$/);
+    expect(video1.size).toBeGreaterThan(1000);
 
     expect(response2.status).toBe(200);
-    const [msg21, msg22, video2] = await Array.fromAsync(
-      streamParts(response2)
-    );
-    expect(await msg21.json()).toEqual({ position: 2 });
-    expect(await msg22.json()).toEqual({ position: 1 });
-    expect(video2.filename).toBe("video.mp4");
-    expect((await video2.bytes()).length).toBeGreaterThan(1000);
+    const video2 = (await collectResponse(response2)).find((x) => "type" in x)!;
+    expect(video2.filename).toMatch(/\.mp4$/);
+    expect(video2.size).toBeGreaterThan(1000);
   });
 
   it("should stream the queue position", async () => {
     const query = new URLSearchParams({
       format: "mp4",
     });
-    const r1 = server.fetch(
+    const res1 = server.fetch(
       new Request(`http://localhost:3000/videos/process?${query}`, {
         method: "POST",
         body: Bun.file("fixtures/video.mp4"),
       })
     );
-    const r2 = server.fetch(
+    const res2 = server.fetch(
       new Request(`http://localhost:3000/videos/process?${query}`, {
         method: "POST",
         body: Bun.file("fixtures/video.mp4"),
       })
     );
 
-    const [stream1, stream2] = await Promise.all([
-      Array.fromAsync(streamParts(await r1)),
-      Array.fromAsync(streamParts(await r2)),
+    const [coll1, coll2] = await Promise.all([
+      (res1 as Promise<Response>).then(collectResponse),
+      (res2 as Promise<Response>).then(collectResponse),
     ]);
 
-    expect(await stream1[0].json()).toEqual({ position: 1 });
-    expect(await stream2[0].json()).toEqual({ position: 2 });
-    expect(await stream2[1].json()).toEqual({ position: 1 });
+    expect(coll1[0]).toEqual({ position: 0 });
+    expect(coll2[0]).toEqual({ position: 1 });
+    expect(coll2[1]).toEqual({ position: 0 });
   });
 
   it("should not stream back, if output is provided", async () => {
@@ -104,9 +103,14 @@ describe("/process", () => {
     );
 
     expect(response.status).toBe(200);
-    const parts = await Array.fromAsync(streamParts(response));
-    expect(parts.length).toBe(1);
-    expect(await parts[0].json()).toEqual({ position: 1 });
+    let notifications: (QueuePosition | Progress)[] = [];
+    for await (const part of streamParts(response)) {
+      if (part.type === "application/json") {
+        notifications.push((await part.json()) as QueuePosition | Progress);
+      }
+    }
+    expect(notifications[0]).toEqual({ position: 0 });
+    expect(notifications[1]).toEqual({ progress: 0 });
     const file = Bun.file("/tmp/test-output.mp4");
     expect(file.size).toBeGreaterThan(1000);
     await file.unlink();
@@ -216,3 +220,28 @@ describe("/videos/audio-filters", () => {
     expect(json).toEqual(await getAudioFilters());
   });
 });
+
+async function collectResponse(response: Response) {
+  const collected: (
+    | QueuePosition
+    | Progress
+    | ProcessingError
+    | { filename: string; type: string; size: number }
+  )[] = [];
+  for await (const part of streamParts(response)) {
+    if (part.type === "application/json") {
+      collected.push(
+        (await part.json()) as QueuePosition | Progress | ProcessingError
+      );
+    } else if (part.type === "text/plain") {
+      continue; // keepalive
+    } else {
+      collected.push({
+        filename: part.filename!,
+        type: part.type!,
+        size: (await part.bytes()).length,
+      });
+    }
+  }
+  return collected;
+}

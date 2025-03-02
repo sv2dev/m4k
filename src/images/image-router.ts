@@ -1,15 +1,12 @@
 import { Type as T, type StaticDecode } from "@sinclair/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
-import { BOUNDARY, END, part } from "../util/multipart-mixed";
 import { parseOpts } from "../util/request-parsing";
-import { error } from "../util/response";
+import { error, queueAndStream } from "../util/response";
 import { numberQueryParamSchema } from "../util/typebox";
 import {
-  createOptimizer,
-  imageQueue,
-  otpimizeImage as optimizeImage,
+  optimizeImage,
   optionsSchema,
-  type OptimizerOptions,
+  type ImageOptimizerOptions,
 } from "./image-optimizer";
 
 const querySchema = T.Object({
@@ -32,62 +29,17 @@ const querySchema = T.Object({
 const compiledOptionsSchema = TypeCompiler.Compile(optionsSchema);
 
 export async function processImages(request: Request) {
-  if (imageQueue.size === imageQueue.max) {
-    return error(503, "Queue is full");
-  }
-  let optsArr: OptimizerOptions[];
+  let optsArr: ImageOptimizerOptions[];
   try {
     optsArr = parseOpts(request, compiledOptionsSchema, queryToOptions);
   } catch (err) {
     return error(400, (err as RangeError).message);
   }
-  if (optsArr.length === 0) {
-    return error(400, "No options provided");
-  }
-  const { readable, writable } = new TransformStream<Uint8Array>();
-  const writer = writable.getWriter();
-  let first = true;
-
-  const iterable = imageQueue.pushAndIterate(async () => {
-    const fileStreams = [] as ReadableStream<Uint8Array>[];
-    const optimizer = createOptimizer(request.body!);
-    for (const opts of optsArr) {
-      fileStreams.push(optimizeImage(optimizer.clone(), opts));
-    }
-    for (let i = 0; i < fileStreams.length; i++) {
-      const opts = optsArr[i];
-      const { format } = opts;
-      const name = `file${i + 1}`;
-      const filename = `${name}.${format}`;
-      const contentType = Bun.file(filename).type;
-      writer.write(part({ first, filename, contentType }));
-      first = false;
-      const reader = fileStreams[i].getReader();
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        writer.write(value);
-      }
-      await writer.write(END);
-    }
-  })!;
-  streamQueuePosition();
-  return new Response(readable, {
-    headers: {
-      "content-type": `multipart/mixed; boundary="${BOUNDARY}"`,
-      "transfer-encoding": "chunked",
-    },
-  });
-
-  async function streamQueuePosition() {
-    for await (const [position] of iterable) {
-      if (position === null) writer.close();
-      else if (position > 0) {
-        writer.write(part({ first, payload: { position } }));
-        first = false;
-      }
-    }
-  }
+  if (optsArr.length === 0) return error(400, "No options provided");
+  if (!request.body) return error(400, "No body provided");
+  const iterable = optimizeImage(request.body, optsArr, request.signal);
+  if (!iterable) return error(409, "Queue is full");
+  return queueAndStream(iterable);
 }
 
 function queryToOptions({
@@ -99,10 +51,9 @@ function queryToOptions({
   cropWidth,
   cropHeight,
   ...query
-}: StaticDecode<typeof querySchema>): OptimizerOptions {
+}: StaticDecode<typeof querySchema>): ImageOptimizerOptions {
   return {
     ...query,
-    format: query.format ?? "avif",
     ...((width || height) && {
       resize: {
         width,

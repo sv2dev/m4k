@@ -1,6 +1,7 @@
 import { $ } from "bun";
+import { extMap } from "./video-optimizer";
 
-export const ffmpegPath =
+export const ffmpeg =
   Bun.env.FFMPEG_PATH ?? (await import("@ffmpeg-installer/ffmpeg")).path;
 
 export async function getAudioEncoders() {
@@ -38,7 +39,7 @@ let filters: Promise<{ audio: Features; video: Features }>;
 let formats: Promise<{ input: Features; output: Features }>;
 
 async function loadEncoders() {
-  const text = await $`${ffmpegPath} -encoders`.text();
+  const text = await $`${ffmpeg} -encoders`.text();
   const lines = text.split("\n");
   const idx = lines.indexOf(" ------");
   const encoderLines = lines.slice(idx + 1);
@@ -57,7 +58,7 @@ async function loadEncoders() {
 }
 
 async function loadFilters() {
-  const text = await $`${ffmpegPath} -filters`.text();
+  const text = await $`${ffmpeg} -filters`.text();
   const lines = text.split("\n");
   const idx = lines.indexOf("  | = Source or sink filter");
   const encoderLines = lines.slice(idx + 1);
@@ -74,7 +75,7 @@ async function loadFilters() {
 }
 
 async function loadFormats() {
-  const text = await $`${ffmpegPath} -formats`.text();
+  const text = await $`${ffmpeg} -formats`.text();
   const lines = text.split("\n");
   const idx = lines.indexOf("  | = Source or sink filter");
   const encoderLines = lines.slice(idx + 1);
@@ -88,4 +89,7 @@ async function loadFormats() {
     if (enc === "E") output[name] = description;
   }
   return { input, output };
+}
+export function getExtension(format: string) {
+  return extMap[format] ?? format;
 }
