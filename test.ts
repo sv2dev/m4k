@@ -1,33 +1,21 @@
-import { Part } from "@sv2dev/multipart-stream";
-import { optimizeImage, optimizeVideo } from "./src/client";
+import { optimizeImage, optimizeVideo } from "./src";
 
-for await (const value of optimizeVideo(
-  "http://localhost:3000",
-  Bun.file("fixtures/video.mp4"),
-  { format: "mp4", videoCodec: "libx265" }
-)) {
-  if (value instanceof Part) {
-    const file = Bun.file(value.filename ?? "test.mp4");
-    const writer = file.writer();
-    for await (const chunk of value) {
-      writer.write(chunk);
-      await writer.flush();
-    }
-    await writer.end();
-  } else {
-    console.log(value);
-  }
+for await (const value of optimizeVideo(Bun.file("fixtures/video.mp4"), {
+  format: "mp4",
+  videoCodec: "libx265",
+  output: "test.mp4",
+})!) {
+  console.log(value);
 }
 
-for await (const value of optimizeImage(
-  "http://localhost:3000",
-  Bun.file("fixtures/image.jpeg"),
-  { format: "jpeg", quality: 40 }
-)) {
-  if (value instanceof Part) {
-    const file = Bun.file(value.filename ?? "test.mp4");
+for await (const value of optimizeImage(Bun.file("fixtures/image.jpeg"), {
+  format: "jpeg",
+  quality: 40,
+})!) {
+  if (value instanceof Blob) {
+    const file = Bun.file("test.jpeg");
     const writer = file.writer();
-    for await (const chunk of value) {
+    for await (const chunk of value.stream() as unknown as AsyncIterable<Uint8Array>) {
       writer.write(chunk);
       await writer.flush();
     }

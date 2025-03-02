@@ -58,8 +58,10 @@ export function optimizeVideo(
     let metadataStr = "";
     let duration: number | null = null;
     let progress = 0;
+    let errStr = "";
     for await (const chunk of child.stderr as any as AsyncIterable<Uint8Array>) {
       const str = decoder.decode(chunk);
+      errStr += str;
       if (duration === null) {
         metadataStr += str;
         duration = parseDuration(metadataStr);
@@ -83,7 +85,7 @@ export function optimizeVideo(
 
     const code = await child.exited;
     if (code !== 0) {
-      throw new Error(`ffmpeg exited with code ${code}`);
+      throw new Error(`ffmpeg exited with code ${code}: ${errStr}`);
     }
 
     if (!opts.output) {
