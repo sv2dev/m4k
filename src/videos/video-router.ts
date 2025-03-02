@@ -1,6 +1,6 @@
 import { TypeCompiler } from "@sinclair/typebox/compiler";
 import { parseOpts } from "../util/request-parsing";
-import { error, json, queueAndStream } from "../util/response";
+import { error, queueAndStream } from "../util/response";
 import {
   optimizeVideo,
   optionsSchema,
@@ -52,25 +52,25 @@ export async function processVideo(request: Request) {
 }
 
 export async function getSupportedVideoEncoders() {
-  return json(await getVideoEncoders());
+  return Response.json(await getVideoEncoders());
 }
 
 export async function getSupportedVideoFilters() {
-  return json(await getVideoFilters());
+  return Response.json(await getVideoFilters());
 }
 
 export async function getSupportedAudioEncoders() {
-  return json(await getAudioEncoders());
+  return Response.json(await getAudioEncoders());
 }
 
 export async function getSupportedAudioFilters() {
-  return json(await getAudioFilters());
+  return Response.json(await getAudioFilters());
 }
 
 export async function getSupportedInputFormats() {
-  return json(await getInputFormats());
+  return Response.json(await getInputFormats());
 }
 
 export async function getSupportedOutputFormats() {
-  return json(await getOutputFormats());
+  return Response.json(await getOutputFormats());
 }
