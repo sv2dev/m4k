@@ -4,11 +4,9 @@ import { parseOpts } from "../util/request-parsing";
 import { error, queueAndStream } from "../util/response";
 import { numberQueryParamSchema } from "../util/typebox";
 import {
-  createOptimizer,
-  imageQueue,
   otpimizeImage as optimizeImage,
   optionsSchema,
-  type OptimizerOptions,
+  type ImageOptimizerOptions,
 } from "./image-optimizer";
 
 const querySchema = T.Object({
@@ -31,36 +29,17 @@ const querySchema = T.Object({
 const compiledOptionsSchema = TypeCompiler.Compile(optionsSchema);
 
 export async function processImages(request: Request) {
-  let optsArr: OptimizerOptions[];
+  let optsArr: ImageOptimizerOptions[];
   try {
     optsArr = parseOpts(request, compiledOptionsSchema, queryToOptions);
   } catch (err) {
     return error(400, (err as RangeError).message);
   }
-  if (optsArr.length === 0) {
-    return error(400, "No options provided");
-  }
-  return queueAndStream(imageQueue, async (multipart) => {
-    const fileStreams = [] as ReadableStream<Uint8Array>[];
-    const optimizer = createOptimizer(request.body!);
-    for (const opts of optsArr) {
-      fileStreams.push(optimizeImage(optimizer.clone(), opts));
-    }
-    for (let i = 0; i < fileStreams.length; i++) {
-      const opts = optsArr[i];
-      const { format } = opts;
-      const name = `file${i + 1}`;
-      const filename = `${name}.${format}`;
-      const contentType = Bun.file(filename).type;
-      await multipart.part({ filename, contentType });
-      const reader = fileStreams[i].getReader();
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        await multipart.write(value);
-      }
-    }
-  });
+  if (optsArr.length === 0) return error(400, "No options provided");
+  if (!request.body) return error(400, "No body provided");
+  const generator = optimizeImage(request.body, optsArr, request.signal);
+  if (!generator) return error(409, "Queue is full");
+  return queueAndStream(generator());
 }
 
 function queryToOptions({
@@ -72,10 +51,9 @@ function queryToOptions({
   cropWidth,
   cropHeight,
   ...query
-}: StaticDecode<typeof querySchema>): OptimizerOptions {
+}: StaticDecode<typeof querySchema>): ImageOptimizerOptions {
   return {
     ...query,
-    format: query.format ?? "avif",
     ...((width || height) && {
       resize: {
         width,

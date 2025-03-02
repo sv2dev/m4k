@@ -1,6 +1,6 @@
 import { Type as T, type StaticDecode } from "@sinclair/typebox";
-import { Queue } from "@sv2dev/queue";
 import { spawn, type BunFile } from "bun";
+import { createQueue } from "tasque";
 import { ffmpeg } from "./video-utils";
 
 export const optionsSchema = T.Object({
@@ -28,67 +28,76 @@ export const extMap: Record<string, string> = {
   matroska: "mkv",
 };
 
-export async function* optimizeVideo(
-  opts: VideoOptimizerOptions,
+export function optimizeVideo(
   input: BunFile,
-  abortSignal?: AbortSignal
+  opts: VideoOptimizerOptions,
+  signal?: AbortSignal
 ) {
-  const output = Bun.file(
-    opts.output ?? input.name!.replace("input", "output")
-  );
+  const iterable = videoQueue.iterate(async function* () {
+    const output = Bun.file(
+      opts.output ?? input.name!.replace("input", "output")
+    );
 
-  const vc = opts.videoCodec ?? "copy";
-  const ac = opts.audioCodec ?? "copy";
+    const vc = opts.videoCodec ?? "copy";
+    const ac = opts.audioCodec ?? "copy";
 
-  const child = spawn(
-    [
-      ffmpeg,
-      "-y",
-      "-i",
-      input.name!,
-      ...(ac ? ["-c:a", ac] : []),
-      ...(vc ? ["-c:v", vc] : []),
-      output.name!,
-    ],
-    { stderr: "pipe", signal: abortSignal }
-  );
-  const decoder = new TextDecoder();
+    const child = spawn(
+      [
+        ffmpeg,
+        "-y",
+        "-i",
+        input.name!,
+        ...(ac ? ["-c:a", ac] : []),
+        ...(vc ? ["-c:v", vc] : []),
+        output.name!,
+      ],
+      { stderr: "pipe", signal }
+    );
+    const decoder = new TextDecoder();
 
-  let metadataStr = "";
-  let duration: number | null = null;
-  let progress = 0;
-  for await (const chunk of child.stderr as any as AsyncIterable<Uint8Array>) {
-    const str = decoder.decode(chunk);
-    if (duration === null) {
-      metadataStr += str;
-      duration = parseDuration(metadataStr);
+    let metadataStr = "";
+    let duration: number | null = null;
+    let progress = 0;
+    for await (const chunk of child.stderr as any as AsyncIterable<Uint8Array>) {
+      const str = decoder.decode(chunk);
       if (duration === null) {
-        metadataStr = str.slice(-30);
+        metadataStr += str;
+        duration = parseDuration(metadataStr);
+        if (duration === null) {
+          metadataStr = str.slice(-30);
+          continue;
+        }
+        yield { progress };
         continue;
       }
-      yield { progress };
-      continue;
-    }
-    const match = str.match(/time=(\S+)/);
-    if (match) {
-      const time = durationToMs(match[1]);
-      const p = Math.floor((time / duration) * 100);
-      if (p !== progress) {
-        progress = p;
-        yield { progress };
+      const match = str.match(/time=(\S+)/);
+      if (match) {
+        const time = durationToMs(match[1]);
+        const p = Math.round((time / duration) * 100);
+        if (p !== progress) {
+          progress = p;
+          yield { progress };
+        }
       }
     }
-  }
 
-  const code = await child.exited;
-  if (code !== 0) {
-    throw new Error(`ffmpeg exited with code ${code}`);
-  }
+    const code = await child.exited;
+    if (code !== 0) {
+      throw new Error(`ffmpeg exited with code ${code}`);
+    }
 
-  if (!opts.output) {
-    yield output;
-    await output.unlink();
-  }
+    if (!opts.output) {
+      yield output;
+      await output.unlink();
+    }
+  }, signal);
+  if (!iterable) return null;
+  return async function* () {
+    for await (const [position, value] of iterable) {
+      if (position !== null) yield { position };
+      else yield value;
+    }
+  };
 }
 
 function parseDuration(metadataStr: string) {
@@ -103,7 +112,7 @@ function durationToMs(duration: string) {
   return (((hours * 60 + minutes) * 60 + seconds) * 100 + centiseconds) * 10;
 }
 
-export const videoQueue = new Queue({
+const videoQueue = createQueue({
   parallelize: Number(Bun.env.VIDEO_PARALLELIZE ?? 1),
   max: Number(Bun.env.VIDEO_QUEUE_SIZE ?? 5),
 });

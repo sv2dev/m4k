@@ -1,11 +1,9 @@
 import { TypeCompiler } from "@sinclair/typebox/compiler";
-import { basename } from "node:path";
 import { parseOpts } from "../util/request-parsing";
 import { error, json, queueAndStream } from "../util/response";
 import {
   optimizeVideo,
   optionsSchema,
-  videoQueue,
   type VideoOptimizerOptions,
 } from "./video-optimizer";
 import {
@@ -27,43 +25,29 @@ export async function processVideo(request: Request) {
   } catch (err) {
     return error(400, (err as RangeError).message);
   }
-  if (!opts) {
-    return error(400, "No options provided");
-  }
+  if (!opts) return error(400, "No options provided");
   const inputFile = Bun.file(
     `/tmp/input-${Bun.randomUUIDv7("base64url")}.${getExtension(
       opts.inputFormat ?? "mp4"
     )}`
   );
+  const writer = inputFile.writer();
+  for await (const chunk of request.body as unknown as AsyncIterable<Uint8Array>) {
+    writer.write(chunk);
+    await writer.flush();
+  }
+  await writer.end();
+  const generator = optimizeVideo(inputFile, opts, request.signal);
+  if (!generator) return error(409, "Queue is full");
+
   return queueAndStream(
-    videoQueue,
-    async (multipart) => {
+    (async function* () {
       try {
-        for await (const x of optimizeVideo(opts, inputFile, request.signal)) {
-          if ("progress" in x) {
-            await multipart.part({ payload: x });
-          } else {
-            await multipart.part({
-              contentType: x.type,
-              filename: basename(x.name!),
-            });
-            for await (const chunk of x.stream() as unknown as AsyncIterable<Uint8Array>) {
-              await multipart.write(chunk);
-            }
-          }
-        }
+        yield* generator();
       } finally {
         await inputFile.unlink();
       }
-    },
-    async () => {
-      const writer = inputFile.writer();
-      for await (const chunk of request.body as unknown as AsyncIterable<Uint8Array>) {
-        writer.write(chunk);
-        await writer.flush();
-      }
-      await writer.end();
-    }
+    })()
   );
 }
 

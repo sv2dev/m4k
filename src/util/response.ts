@@ -1,4 +1,5 @@
-import type { Queue } from "@sv2dev/queue";
+import type { BunFile } from "bun";
+import { basename } from "node:path";
 import { BOUNDARY, MultipartMixed } from "./multipart-mixed";
 
 export function error(status: number, message: string) {
@@ -21,46 +22,37 @@ export function stream(readable: ReadableStream) {
 }
 
 export async function queueAndStream(
-  queue: Queue,
-  task: (multipart: MultipartMixed) => Promise<void>,
-  prepare?: (multipart: MultipartMixed) => Promise<void>,
-  abortSignal?: AbortSignal
+  iterable: AsyncIterable<{} | BunFile | Blob>
 ) {
   const multipart = new MultipartMixed();
-  let preparing: Promise<void> | undefined;
-  const iterable = queue.pushAndIterate(async () => {
-    await preparing;
+  iterate();
+  return stream(multipart.stream);
+
+  async function iterate() {
+    const { reset, clear } = idle(() => {
+      multipart.part({ payload: "keepalive" });
+    }, KEEP_ALIVE_INTERVAL);
     try {
-      await task(multipart);
+      for await (const x of iterable) {
+        if ("stream" in x) {
+          clear();
+          multipart.part({
+            contentType: x.type,
+            filename: basename(x.name!),
+          });
+          for await (const chunk of x.stream() as unknown as AsyncIterable<Uint8Array>) {
+            multipart.write(chunk);
+          }
+        } else {
+          reset();
+          multipart.part({ payload: x });
+        }
+      }
     } catch (err) {
       // err can be undefined, if the connection was aborted
       if (err) multipart.part({ payload: { error: (err as Error).message } });
     }
-    if (!abortSignal || !abortSignal.aborted) {
-      await multipart.end();
-    }
-  });
-  if (!iterable) error(503, "Queue is full");
-  if (prepare) {
-    preparing = prepare(multipart);
-    await preparing;
-  }
-  streamQueuePosition();
-  return stream(multipart.stream);
-
-  async function streamQueuePosition() {
-    const { reset, clear } = idle(() => {
-      multipart.part({ payload: "keepalive" });
-    }, KEEP_ALIVE_INTERVAL);
-    abortSignal?.addEventListener("abort", clear);
-    for await (const [position] of iterable!) {
-      if (position) {
-        reset();
-        multipart.part({ payload: { position } });
-      } else {
-        clear();
-      }
-    }
+    await multipart.end();
   }
 }
 
@@ -71,7 +63,9 @@ function idle(fn: (...args: any[]) => void, wait: number) {
       clearInterval(interval);
       interval = setInterval(() => fn(...args), wait);
     },
-    clear: () => clearInterval(interval),
+    clear: () => {
+      clearInterval(interval);
+    },
   };
 }
 

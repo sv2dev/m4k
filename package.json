@@ -13,9 +13,9 @@
   "devDependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@sinclair/typebox": "^0.34.14",
-    "@sv2dev/multipart-stream": "^0.1.3",
-    "@sv2dev/queue": "^0.2.0",
+    "@sv2dev/multipart-stream": "^0.2.0",
     "@types/bun": "latest",
+    "tasque": "^0.1.2",
     "typescript": "^5.0.0"
   },
   "dependencies": {

@@ -6,7 +6,8 @@ export function readableFromWeb(stream: ReadableStream) {
 }
 
 export function readableToWeb(stream: Readable) {
-  return Readable.toWeb(stream) as unknown as ReadableStream;
+  return Readable.toWeb(stream) as unknown as ReadableStream &
+    AsyncIterable<Uint8Array>;
 }
 
 export function writableToWeb(stream: Writable) {
