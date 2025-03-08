@@ -1,62 +1,8 @@
-import { Type as T, type StaticDecode } from "@sinclair/typebox";
+import { type ImageOptimizerOptions, ConvertedFile } from "@m4k/types";
 import sharp from "sharp";
 import { createQueue } from "tasque";
-import { VirtualFile } from "../util/file";
 import { readableFromWeb, readableToWeb } from "../util/streams";
-import { numberQueryParamSchema } from "../util/typebox";
 
-export const optionsSchema = T.Object({
-  rotate: T.Optional(numberQueryParamSchema),
-  resize: T.Optional(
-    T.Object({
-      width: T.Optional(numberQueryParamSchema),
-      height: T.Optional(numberQueryParamSchema),
-      fit: T.Optional(
-        T.Union([
-          T.Literal("contain"),
-          T.Literal("cover"),
-          T.Literal("fill"),
-          T.Literal("inside"),
-          T.Literal("outside"),
-        ])
-      ),
-    })
-  ),
-  format: T.Optional(
-    T.Union([
-      T.Literal("avif"),
-      T.Literal("jpeg"),
-      T.Literal("png"),
-      T.Literal("webp"),
-      T.Literal("tiff"),
-      T.Literal("magick"),
-      T.Literal("openslide"),
-      T.Literal("dz"),
-      T.Literal("ppm"),
-      T.Literal("fits"),
-      T.Literal("gif"),
-      T.Literal("svg"),
-      T.Literal("heif"),
-      T.Literal("pdf"),
-      T.Literal("jp2"),
-    ])
-  ),
-  quality: T.Optional(numberQueryParamSchema),
-  keepMetadata: T.Optional(T.Boolean()),
-  keepExif: T.Optional(T.Boolean()),
-  keepIcc: T.Optional(T.Boolean()),
-  colorspace: T.Optional(T.String()),
-  crop: T.Optional(
-    T.Object({
-      left: T.Optional(T.Number()),
-      top: T.Optional(T.Number()),
-      width: T.Number(),
-      height: T.Number(),
-    })
-  ),
-});
-
-export type ImageOptimizerOptions = StaticDecode<typeof optionsSchema>;
 export type Format = Required<ImageOptimizerOptions>["format"];
 export type Fit = Required<Required<ImageOptimizerOptions>["resize"]>["fit"];
 
@@ -65,7 +11,7 @@ export function optimizeImage(
   opts: ImageOptimizerOptions | ImageOptimizerOptions[],
   signal?: AbortSignal
 ) {
-  const sharpInstance = sharp().rotate();
+  const sharpInstance = sharp();
   const iterable = imageQueue.iterate(async function* () {
     opts = Array.isArray(opts) ? opts : [opts];
     readableFromWeb("stream" in input ? input.stream() : input).pipe(
@@ -88,7 +34,7 @@ export function optimizeImage(
           idx
         ) => {
           let s = sharpInstance.clone();
-          if (rotate) s = s.rotate(rotate);
+          s = s.rotate(rotate);
           if (resize)
             s = s.resize({
               ...resize,
@@ -106,10 +52,12 @@ export function optimizeImage(
             });
           }
           s = s.toFormat(format, { quality });
-          return new VirtualFile(readableToWeb(s), {
-            type: `image/${format}`,
-            name: `file${idx + 1}.${format}`,
-          });
+
+          return new ConvertedFile(
+            `file${idx + 1}.${format}`,
+            `image/${format}`,
+            readableToWeb(s)
+          );
         }
       )
     );
@@ -130,7 +78,7 @@ export function optimizeImage(
   })();
 }
 
-const imageQueue = createQueue({
-  parallelize: Number(Bun.env.IMAGE_PARALLELIZE ?? 5),
-  max: Number(Bun.env.IMAGE_QUEUE_SIZE ?? 100),
+export const imageQueue = createQueue({
+  parallelize: Number(process.env.IMAGE_PARALLELIZE ?? 5),
+  max: Number(process.env.IMAGE_QUEUE_SIZE ?? 100),
 });

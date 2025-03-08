@@ -5,13 +5,12 @@ const LB = "\r\n";
 
 export class MultipartMixed {
   readonly stream: ReadableStream<Uint8Array>;
-
-  #first = true;
-  #writer: WritableStreamDefaultWriter;
+  private _first = true;
+  private _writer: WritableStreamDefaultWriter;
 
   constructor() {
     const { readable, writable } = new TransformStream<Uint8Array>();
-    this.#writer = writable.getWriter();
+    this._writer = writable.getWriter();
     this.stream = readable;
   }
 
@@ -45,24 +44,18 @@ export class MultipartMixed {
       }`,
     ];
 
-    const first = this.#first;
-    this.#first = false;
-    await this.#write(
-      textEncoder.encode(`${first ? "" : LB}${lines.join(LB)}`)
-    );
+    const first = this._first;
+    this._first = false;
+    await this.write(textEncoder.encode(`${first ? "" : LB}${lines.join(LB)}`));
   }
 
   async write(chunk: Uint8Array) {
-    await this.#write(chunk);
+    await this._writer.write(chunk);
   }
 
   async end() {
-    await this.#write(END);
-    this.#writer.close();
-  }
-
-  async #write(chunk: Uint8Array) {
-    await this.#writer.write(chunk);
+    await this.write(END);
+    await this._writer.close();
   }
 }
 

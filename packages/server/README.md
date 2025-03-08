@@ -1,6 +1,6 @@
-# m4k - media toolkit
+# m4k - media toolkit server
 
-A Bun media optimizer based on [ffmpeg](https://ffmpeg.org/) and [sharp](https://sharp.pixelplumbing.com/)/[libvips](https://github.com/libvips/libvips).
+A Bun media conversion server based on [ffmpeg](https://ffmpeg.org/) and [sharp](https://sharp.pixelplumbing.com/)/[libvips](https://github.com/libvips/libvips).
 
 The docker image is available at [ghcr.io/sv2dev/media-optimizer](https://github.com/sv2dev/media-optimizer/pkgs/container/media-optimizer). It uses Bun as runtime.
 

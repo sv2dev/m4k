@@ -1,4 +1,4 @@
-import type { BunFile } from "bun";
+import { ConvertedFile } from "@m4k/types";
 import { basename } from "node:path";
 import { BOUNDARY, MultipartMixed } from "./multipart-mixed";
 
@@ -16,7 +16,7 @@ export function stream(readable: ReadableStream) {
 }
 
 export async function queueAndStream(
-  iterable: AsyncIterable<{} | BunFile | Blob>
+  iterable: AsyncIterable<{} | ConvertedFile | Blob>
 ) {
   const multipart = new MultipartMixed();
   iterate();
@@ -28,13 +28,13 @@ export async function queueAndStream(
     }, KEEP_ALIVE_INTERVAL);
     try {
       for await (const x of iterable) {
-        if ("stream" in x) {
+        if (x instanceof ConvertedFile) {
           clear();
           multipart.part({
             contentType: x.type,
             filename: basename(x.name!),
           });
-          for await (const chunk of x.stream() as unknown as AsyncIterable<Uint8Array>) {
+          for await (const chunk of x.stream!) {
             multipart.write(chunk);
           }
         } else {

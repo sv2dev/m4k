@@ -1,4 +1,4 @@
-import { optimizeImage, optimizeVideo } from "./src";
+import { optimizeImage, optimizeVideo } from "m4k";
 
 for await (const value of optimizeVideo(Bun.file("fixtures/video.mp4"), {
   format: "mp4",
