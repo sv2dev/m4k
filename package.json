@@ -1,25 +1,18 @@
 {
-  "name": "@sv2dev/media-optimizer",
-  "module": "./index.ts",
-  "type": "module",
-  "version": "0.0.3",
-  "main": "./index.ts",
+  "name": "m4k-workspaces",
+  "private": true,
   "scripts": {
-    "dev": "bun --watch src/server.ts",
-    "build": "bun build ./src/server.ts --outfile dist/app.js --target bun",
-    "build-types": "tsc",
-    "typecheck": "tsc --noEmit"
+    "dev": "bun --filter @m4k/server dev",
+    "test": "bun --filter '*' test",
+    "build": "bun --filter '*' build",
+    "build:docker": "bun --filter @m4k/server build:docker",
+    "typecheck": "bun --filter '*' typecheck"
   },
   "devDependencies": {
-    "@ffmpeg-installer/ffmpeg": "^1.1.0",
-    "@sinclair/typebox": "^0.34.14",
-    "@sv2dev/multipart-stream": "^0.2.0",
-    "@types/bun": "^1.2.4",
-    "tasque": "^0.1.2",
     "typescript": "^5.0.0"
   },
-  "dependencies": {
-    "sharp": "^0.33.5"
-  },
-  "repository": "github:sv2dev/media-optimizer"
+  "workspaces": [
+    "packages/*"
+  ],
+  "repository": "github:sv2dev/ "
 }

@@ -1,15 +1,14 @@
-import { Part } from "@sv2dev/multipart-stream";
-import { optimizeImage, optimizeVideo } from "./src/client";
+import { ConvertedFile, optimizeImage, optimizeVideo } from "@m4k/client";
 
 for await (const value of optimizeVideo(
   "http://localhost:3000",
   Bun.file("fixtures/video.mp4"),
   { format: "mp4", videoCodec: "libx265" }
 )) {
-  if (value instanceof Part) {
-    const file = Bun.file(value.filename ?? "test.mp4");
+  if (value instanceof ConvertedFile) {
+    const file = Bun.file(value.name);
     const writer = file.writer();
-    for await (const chunk of value) {
+    for await (const chunk of value.stream) {
       writer.write(chunk);
       await writer.flush();
     }
@@ -24,10 +23,10 @@ for await (const value of optimizeImage(
   Bun.file("fixtures/image.jpeg"),
   { format: "jpeg", quality: 40 }
 )) {
-  if (value instanceof Part) {
-    const file = Bun.file(value.filename ?? "test.mp4");
+  if (value instanceof ConvertedFile) {
+    const file = Bun.file(value.name);
     const writer = file.writer();
-    for await (const chunk of value) {
+    for await (const chunk of value.stream) {
       writer.write(chunk);
       await writer.flush();
     }

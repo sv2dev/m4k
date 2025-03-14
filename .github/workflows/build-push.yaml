@@ -5,14 +5,16 @@ on:
     branches:
       - main
 env:
-  IMAGE_NAME: media-optimizer
+  IMAGE_NAME: m4k
 jobs:
   check-version:
     name: Check if version changed
     runs-on: ubuntu-latest
     outputs:
-      version-changed: ${{ steps.check.outputs.changed }}
-      version: ${{ steps.check.outputs.version }}
+      core-changed: ${{ steps.check.outputs.core-changed }}
+      server-changed: ${{ steps.check.outputs.server-changed }}
+      client-changed: ${{ steps.check.outputs.client-changed }}
+      server-version: ${{ steps.check.outputs.server-version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -21,18 +23,106 @@ jobs:
         id: check
         shell: bash
         run: |
-          CURRENT_VERSION=$(jq -r .version package.json)
+          function get_version() {
+            local package_path=$1
+            if [ -f "$package_path" ]; then
+              jq -r .version "$package_path" || echo "0.0.0"
+            else
+              echo "0.0.0"
+            fi
+          }
+
+          CURRENT_CORE_VERSION=$(get_version "packages/core/package.json")
+          CURRENT_SERVER_VERSION=$(get_version "packages/server/package.json")
+          CURRENT_CLIENT_VERSION=$(get_version "packages/client/package.json")
           git checkout HEAD^
-          PREVIOUS_VERSION=$(jq -r .version package.json)
+          PREVIOUS_CORE_VERSION=$(get_version "packages/core/package.json")
+          PREVIOUS_SERVER_VERSION=$(get_version "packages/server/package.json")
+          PREVIOUS_CLIENT_VERSION=$(get_version "packages/client/package.json")
 
-          changed=$([ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ] && echo "true" || echo "false")
-          echo "changed=$changed" >> "$GITHUB_OUTPUT"
-          echo "version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
-
-  pushImage:
-    name: Build and push image
+          core_changed=$([ "$CURRENT_CORE_VERSION" != "$PREVIOUS_COREVERSION" ] && echo "true" || echo "false")
+          server_changed=$([ "$CURRENT_SERVER_VERSION" != "$PREVIOUS_SERVER_VERSION" ] && echo "true" || echo "false")
+          client_changed=$([ "$CURRENT_CLIENT_VERSION" != "$PREVIOUS_CLIENT_VERSION" ] && echo "true" || echo "false")
+          echo "core-changed=$core_changed" >> "$GITHUB_OUTPUT"
+          echo "server-changed=$server_changed" >> "$GITHUB_OUTPUT"
+          echo "client-changed=$client_changed" >> "$GITHUB_OUTPUT"
+          echo "server-version=$CURRENT_SERVER_VERSION" >> "$GITHUB_OUTPUT"
+  publish-core:
+    name: Publish core package
     needs: check-version
-    if: needs.check-version.outputs.version-changed == 'true'
+    if: needs.check-version.outputs.core-changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.4
+          registry-url: "https://registry.npmjs.org/"
+      - run: |
+          bun install
+          bun run build
+      - name: Publish package
+        run: bun publish --access public
+        working-directory: ./packages/core
+        env:
+          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-server:
+    name: Publish server package
+    needs: check-version
+    if: needs.check-version.outputs.server-changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.4
+          registry-url: "https://registry.npmjs.org/"
+      - run: |
+          bun install
+          bun run build
+      - name: Publish package
+        run: bun publish --access public
+        working-directory: ./packages/server
+        env:
+          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-client:
+    name: Publish client package
+    needs: check-version
+    if: needs.check-version.outputs.client-changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.4
+          registry-url: "https://registry.npmjs.org/"
+      - run: |
+          bun install
+          bun run build
+      - name: Publish package
+        run: bun publish --access public
+        working-directory: ./packages/client
+        env:
+          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  push-docker-image:
+    name: Build and push docker image
+    needs: check-version
+    if: needs.check-version.outputs.server-changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -49,5 +139,5 @@ jobs:
       - name: Build and push image
         run: |
           IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
-          VERSION=${{ needs.check-version.outputs.version }}
+          VERSION=${{ needs.check-version.outputs.server-version }}
           docker buildx build --push --platform linux/arm64,linux/amd64 . --tag $IMAGE_ID:$VERSION --label "runnumber=${GITHUB_RUN_ID}"

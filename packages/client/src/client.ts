@@ -1,7 +1,12 @@
+import {
+  ConvertedFile,
+  type ImageOptimizerOptions,
+  type ProcessingError,
+  type Progress,
+  type QueuePosition,
+  type VideoOptimizerOptions,
+} from "@m4k/types";
 import { iterableToStream, streamParts } from "@sv2dev/multipart-stream";
-import type { ImageOptimizerOptions } from "./images/image-optimizer";
-import type { ProcessingError, Progress, QueuePosition } from "./types";
-import type { VideoOptimizerOptions } from "./videos/video-optimizer";
 
 export async function* optimizeImage(
   host: string,
@@ -38,13 +43,21 @@ async function* optimizeFetch<T>(
     headers: { "X-Options": JSON.stringify(opts) },
   });
   if (!res.ok) {
-    throw new Error(`Failed to optimize: [${res.statusText}] ${res.text()}`);
+    throw new Error(
+      `Failed to optimize: [${res.statusText}] ${await res.text()}`
+    );
   }
   for await (const part of streamParts(res)) {
     if (part.type === "application/json") {
       yield (await part.json()) as T;
     } else if (part.type !== "text/plain") {
-      yield part;
+      yield new ConvertedFile(
+        part.filename!,
+        part.type!,
+        part
+      ) as ConvertedFile & {
+        stream: AsyncIterable<Uint8Array>;
+      };
     }
   }
 }

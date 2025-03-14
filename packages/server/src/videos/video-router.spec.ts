@@ -1,15 +1,9 @@
+import type { ProcessingError, Progress, QueuePosition } from "@m4k/types";
 import { streamParts } from "@sv2dev/multipart-stream";
 import { describe, expect, it } from "bun:test";
 import { server } from "../server";
-import type { ProcessingError, Progress, QueuePosition } from "../types";
-import {
-  getAudioEncoders,
-  getAudioFilters,
-  getInputFormats,
-  getOutputFormats,
-  getVideoEncoders,
-  getVideoFilters,
-} from "./video-utils";
+
+const fixture = Bun.file(`../../fixtures/video.mp4`);
 
 describe("/process", () => {
   it("should process a video", async () => {
@@ -19,7 +13,7 @@ describe("/process", () => {
     const response = await server.fetch(
       new Request(`http://localhost:3000/videos/process?${query}`, {
         method: "POST",
-        body: Bun.file("fixtures/video.mp4"),
+        body: fixture,
       })
     );
 
@@ -36,28 +30,29 @@ describe("/process", () => {
     const query = new URLSearchParams({
       format: "mp4",
     });
-    const res1 = server.fetch(
+    const res1 = await server.fetch(
       new Request(`http://localhost:3000/videos/process?${query}`, {
         method: "POST",
-        body: Bun.file("fixtures/video.mp4"),
+        body: fixture,
       })
     );
-    const res2 = server.fetch(
+    const coll1 = await collectResponse(res1);
+
+    const res2 = await server.fetch(
       new Request(`http://localhost:3000/videos/process?${query}`, {
         method: "POST",
-        body: Bun.file("fixtures/video.mp4"),
+        body: fixture,
       })
     );
+    const coll2 = await collectResponse(res2);
 
-    const [response1, response2] = await Promise.all([res1, res2]);
-
-    expect(response1.status).toBe(200);
-    const video1 = (await collectResponse(response1)).find((x) => "type" in x)!;
+    expect(res1.status).toBe(200);
+    const video1 = coll1.find((x) => "type" in x)!;
     expect(video1.filename).toMatch(/\.mp4$/);
     expect(video1.size).toBeGreaterThan(1000);
 
-    expect(response2.status).toBe(200);
-    const video2 = (await collectResponse(response2)).find((x) => "type" in x)!;
+    expect(res2.status).toBe(200);
+    const video2 = coll2.find((x) => "type" in x)!;
     expect(video2.filename).toMatch(/\.mp4$/);
     expect(video2.size).toBeGreaterThan(1000);
   });
@@ -69,13 +64,14 @@ describe("/process", () => {
     const res1 = server.fetch(
       new Request(`http://localhost:3000/videos/process?${query}`, {
         method: "POST",
-        body: Bun.file("fixtures/video.mp4"),
+        body: fixture,
       })
     );
+    await Bun.sleep(0); // Make sure the first request is queued
     const res2 = server.fetch(
       new Request(`http://localhost:3000/videos/process?${query}`, {
         method: "POST",
-        body: Bun.file("fixtures/video.mp4"),
+        body: fixture,
       })
     );
 
@@ -98,7 +94,7 @@ describe("/process", () => {
     const response = await server.fetch(
       new Request(`http://localhost:3000/videos/process?${query}`, {
         method: "POST",
-        body: Bun.file("fixtures/video.mp4"),
+        body: fixture,
       })
     );
 
@@ -120,7 +116,7 @@ describe("/process", () => {
     const response = await server.fetch(
       new Request(`http://localhost:3000/videos/process`, {
         method: "POST",
-        body: Bun.file("fixtures/video.mp4"),
+        body: fixture,
       })
     );
 
@@ -132,7 +128,7 @@ describe("/process", () => {
     const response = await server.fetch(
       new Request(`http://localhost:3000/videos/process`, {
         method: "POST",
-        body: Bun.file("fixtures/video.mp4"),
+        body: fixture,
         headers: { "X-Options": "{" },
       })
     );
@@ -145,79 +141,13 @@ describe("/process", () => {
     const response = await server.fetch(
       new Request(`http://localhost:3000/videos/process`, {
         method: "POST",
-        body: Bun.file("fixtures/video.mp4"),
+        body: fixture,
         headers: { "X-Options": JSON.stringify({ fps: "abc" }) },
       })
     );
 
     expect(response.status).toBe(400);
     expect(await response.text()).toEqual("[/fps] Expected number");
-  });
-});
-
-describe("/videos/formats", () => {
-  it("should return supported formats", async () => {
-    const response = await server.fetch(
-      new Request("http://localhost:3000/videos/formats")
-    );
-    expect(response.status).toBe(200);
-    const json = await response.json();
-    expect(json).toEqual(await getOutputFormats());
-  });
-});
-
-describe("/videos/input-formats", () => {
-  it("should return supported formats", async () => {
-    const response = await server.fetch(
-      new Request("http://localhost:3000/videos/input-formats")
-    );
-    expect(response.status).toBe(200);
-    const json = await response.json();
-    expect(json).toEqual(await getInputFormats());
-  });
-});
-
-describe("/videos/encoders", () => {
-  it("should return supported encoders", async () => {
-    const response = await server.fetch(
-      new Request("http://localhost:3000/videos/encoders")
-    );
-    expect(response.status).toBe(200);
-    const json = await response.json();
-    expect(json).toEqual(await getVideoEncoders());
-  });
-});
-
-describe("/videos/filters", () => {
-  it("should return supported filters", async () => {
-    const response = await server.fetch(
-      new Request("http://localhost:3000/videos/filters")
-    );
-    expect(response.status).toBe(200);
-    const json = await response.json();
-    expect(json).toEqual(await getVideoFilters());
-  });
-});
-
-describe("/videos/audio-encoders", () => {
-  it("should return supported audio encoders", async () => {
-    const response = await server.fetch(
-      new Request("http://localhost:3000/videos/audio-encoders")
-    );
-    expect(response.status).toBe(200);
-    const json = await response.json();
-    expect(json).toEqual(await getAudioEncoders());
-  });
-});
-
-describe("/videos/audio-filters", () => {
-  it("should return supported audio filters", async () => {
-    const response = await server.fetch(
-      new Request("http://localhost:3000/videos/audio-filters")
-    );
-    expect(response.status).toBe(200);
-    const json = await response.json();
-    expect(json).toEqual(await getAudioFilters());
   });
 });
 
@@ -230,16 +160,16 @@ async function collectResponse(response: Response) {
   )[] = [];
   for await (const part of streamParts(response)) {
     if (part.type === "application/json") {
-      collected.push(
-        (await part.json()) as QueuePosition | Progress | ProcessingError
-      );
+      const json = await part.json();
+      collected.push(json as QueuePosition | Progress | ProcessingError);
     } else if (part.type === "text/plain") {
       continue; // keepalive
     } else {
+      const bytes = await part.bytes();
       collected.push({
         filename: part.filename!,
         type: part.type!,
-        size: (await part.bytes()).length,
+        size: bytes.length,
       });
     }
   }

@@ -1,8 +1,14 @@
+import type {
+  ImageOptimizerOptions,
+  ProcessingError,
+  Progress,
+  QueuePosition,
+} from "@m4k/types";
 import { streamParts } from "@sv2dev/multipart-stream";
 import { describe, expect, it } from "bun:test";
 import { server } from "../server";
-import type { ProcessingError, Progress, QueuePosition } from "../types";
-import type { ImageOptimizerOptions } from "./image-optimizer";
+
+const fixture = Bun.file("../../fixtures/image.jpeg");
 
 describe("/process", () => {
   it("should process a single image", async () => {
@@ -14,7 +20,7 @@ describe("/process", () => {
     const response = await server.fetch(
       new Request(`http://localhost:3000/images/process?${query}`, {
         method: "POST",
-        body: Bun.file("fixtures/image.jpeg"),
+        body: fixture,
       })
     );
 
@@ -37,13 +43,13 @@ describe("/process", () => {
     const r1 = server.fetch(
       new Request(`http://localhost:3000/images/process?${query}`, {
         method: "POST",
-        body: Bun.file("fixtures/image.jpeg"),
+        body: fixture,
       })
     );
     const r2 = server.fetch(
       new Request(`http://localhost:3000/images/process?${query}`, {
         method: "POST",
-        body: Bun.file("fixtures/image.jpeg"),
+        body: fixture,
       })
     );
 
@@ -69,7 +75,7 @@ describe("/process", () => {
     const res = await server.fetch(
       new Request(`http://localhost:3000/images/process?${query}`, {
         method: "POST",
-        body: Bun.file("fixtures/image.jpeg"),
+        body: fixture,
       })
     );
 
@@ -81,7 +87,7 @@ describe("/process", () => {
     const res = await server.fetch(
       new Request(`http://localhost:3000/images/process`, {
         method: "POST",
-        body: Bun.file("fixtures/image.jpeg"),
+        body: fixture,
       })
     );
 
@@ -93,7 +99,7 @@ describe("/process", () => {
     const res = await server.fetch(
       new Request(`http://localhost:3000/images/process`, {
         method: "POST",
-        body: Bun.file("fixtures/image.jpeg"),
+        body: fixture,
         headers: { "X-Options": "{" },
       })
     );
@@ -106,7 +112,7 @@ describe("/process", () => {
     const response = await server.fetch(
       new Request(`http://localhost:3000/images/process`, {
         method: "POST",
-        body: Bun.file("fixtures/image.jpeg"),
+        body: fixture,
         headers: {
           "X-Options": JSON.stringify([
             {
