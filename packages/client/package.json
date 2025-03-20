@@ -1,19 +1,25 @@
 {
   "name": "@m4k/client",
-  "module": "./dist/index.js",
-  "type": "module",
   "version": "0.1.0",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "type": "module",
+  "module": "./lib/index.js",
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "license": "MIT",
   "scripts": {
-    "prepublishOnly": "bun tsc",
-    "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "prepublishOnly": "bun build",
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
   },
   "devDependencies": {
+    "@m4k/server": "workspace:^",
     "@sv2dev/multipart-stream": "^0.2.0",
     "@types/bun": "^1.2.4",
     "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@m4k/common": "workspace:^"
   },
   "repository": "github:sv2dev/m4k"
 }

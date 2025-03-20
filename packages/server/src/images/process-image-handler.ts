@@ -1,4 +1,4 @@
-import type { ImageOptimizerOptions } from "@m4k/types";
+import type { ImageOptimizerOptions } from "@m4k/common";
 import { Type as T, type StaticDecode } from "@sinclair/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
 import { ConvertedFile, optimizeImage } from "m4k";
@@ -76,8 +76,8 @@ const querySchema = T.Object({
 });
 const compiledOptionsSchema = TypeCompiler.Compile(optionsSchema);
 
-export async function processImages(request: Request) {
-  let optsArr: (ImageOptimizerOptions & { output?: string; name?: string })[];
+export async function processImageHandler(request: Request) {
+  let optsArr: ImageOptimizerOptions[];
   try {
     optsArr = parseOpts(request, compiledOptionsSchema, queryToOptions);
   } catch (err) {
@@ -132,12 +132,12 @@ function queryToOptions({
     }),
     ...(cropWidth &&
       cropHeight && {
-        crop: {
-          left: cropLeft,
-          top: cropTop,
-          width: cropWidth,
-          height: cropHeight,
-        },
-      }),
+      crop: {
+        left: cropLeft,
+        top: cropTop,
+        width: cropWidth,
+        height: cropHeight,
+      },
+    }),
   };
 }

@@ -1,6 +1,7 @@
 {
   "name": "m4k-workspaces",
   "private": true,
+  "license": "MIT",
   "scripts": {
     "dev": "bun --filter @m4k/server dev",
     "test": "bun --filter '*' test",
@@ -14,5 +15,5 @@
   "workspaces": [
     "packages/*"
   ],
-  "repository": "github:sv2dev/ "
+  "repository": "github:sv2dev/m4k"
 }

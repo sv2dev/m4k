@@ -1,20 +1,20 @@
 {
   "name": "@m4k/server",
-  "module": "./dist/index.js",
-  "type": "module",
   "version": "0.1.0",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "type": "module",
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "module": "./lib/index.js",
+  "license": "MIT",
   "scripts": {
-    "dev": "bun --watch src/server.ts",
-    "prepublishOnly": "bun tsc",
-    "build": "tsc",
-    "build:docker": "bun build ./src/server.ts --outfile dist/server/app.js --target bun",
+    "dev": "bun --watch src/index.ts",
+    "prepublishOnly": "bun build",
+    "build": "tsc -b",
+    "build:docker": "bun build ./src/index.ts --outfile dist/server/app.js --target bun",
     "typecheck": "tsc --noEmit",
     "test": "bun test"
   },
   "devDependencies": {
-    "@m4k/types": "workspace:^",
     "@sinclair/typebox": "^0.34.30",
     "@types/bun": "^1.2.4",
     "typescript": "^5.0.0"

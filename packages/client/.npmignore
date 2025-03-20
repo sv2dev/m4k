@@ -1,4 +1,5 @@
 src
 tsconfig.json
 lib/**/*.map
+lib/**/*.spec.*
 *.tsbuildinfo

@@ -1,4 +1,4 @@
-import { ConvertedFile, type VideoOptimizerOptions } from "@m4k/types";
+import { ConvertedFile, type VideoOptimizerOptions } from "@m4k/common";
 import { spawn } from "node:child_process";
 import { getRandomValues } from "node:crypto";
 import { mkdir, rm } from "node:fs/promises";

@@ -1,6 +1,6 @@
 {
-  "name": "m4k",
-  "version": "0.1.1",
+  "name": "@m4k/common",
+  "version": "0.1.0",
   "type": "module",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -9,19 +9,10 @@
   "scripts": {
     "prepublishOnly": "bun build",
     "build": "tsc -b",
-    "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@ffmpeg-installer/ffmpeg": "^1.1.0",
-    "tasque": "^0.1.2",
     "typescript": "^5.0.0"
-  },
-  "dependencies": {
-    "@m4k/common": "workspace:^"
-  },
-  "peerDependencies": {
-    "sharp": "^0.33.5"
   },
   "repository": "github:sv2dev/m4k"
 }
