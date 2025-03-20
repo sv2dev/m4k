@@ -44,7 +44,7 @@ jobs:
           PREVIOUS_CLIENT_VERSION=$(get_version "packages/client/package.json")
 
           common_changed=$([ "$CURRENT_COMMON_VERSION" != "$PREVIOUS_COMMON_VERSION" ] && echo "true" || echo "false")
-          core_changed=$([ "$CURRENT_CORE_VERSION" != "$PREVIOUS_COREVERSION" ] && echo "true" || echo "false")
+          core_changed=$([ "$CURRENT_CORE_VERSION" != "$PREVIOUS_CORE_VERSION" ] && echo "true" || echo "false")
           server_changed=$([ "$CURRENT_SERVER_VERSION" != "$PREVIOUS_SERVER_VERSION" ] && echo "true" || echo "false")
           client_changed=$([ "$CURRENT_CLIENT_VERSION" != "$PREVIOUS_CLIENT_VERSION" ] && echo "true" || echo "false")
           echo "common-changed=$common_changed" >> "$GITHUB_OUTPUT"
