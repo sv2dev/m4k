@@ -142,6 +142,33 @@ describe("/process", () => {
       { progress: 100 },
     ]);
   });
+
+  it("should not stream back, if output is provided", async () => {
+    const query = new URLSearchParams({
+      format: "avif",
+      output: "/tmp/test-output.avif",
+    });
+
+    const response = await processImageHandler(
+      new Request(`http://localhost:3000/images/process?${query}`, {
+        method: "POST",
+        body: fixture,
+      })
+    );
+
+    expect(response.status).toBe(200);
+    let notifications: (QueuePosition | Progress)[] = [];
+    for await (const part of streamParts(response)) {
+      if (part.type === "application/json") {
+        notifications.push((await part.json()) as QueuePosition | Progress);
+      }
+    }
+    expect(notifications[0]).toEqual({ position: 0 });
+    expect(notifications[1]).toEqual({ progress: 0 });
+    const file = Bun.file("/tmp/test-output.avif");
+    expect(file.size).toBeGreaterThan(1000);
+    await file.unlink();
+  });
 });
 
 async function collectResponse(response: Response) {

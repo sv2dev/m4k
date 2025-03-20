@@ -59,7 +59,7 @@ export async function processVideoHandler(request: Request) {
         for await (const value of iterable) {
           if (value instanceof ConvertedFile) {
             if (opts.output) {
-              await Bun.write(opts.output, Bun.file(value.name));
+              await Bun.write(Bun.file(opts.output), Bun.file(value.name));
               await rm(value.name, { force: true });
             } else {
               yield new ConvertedFile(

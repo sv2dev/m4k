@@ -95,7 +95,13 @@ export async function processImageHandler(request: Request) {
         if (value instanceof ConvertedFile) {
           const { output, name } = optsArr[idx];
           if (output) {
-            await Bun.write(output, Bun.file(value.name));
+            const out = Bun.file(output);
+            const writer = out.writer();
+            for await (const chunk of value.stream!) {
+              writer.write(chunk);
+              await writer.flush();
+            }
+            await writer.end();
             await rm(value.name, { force: true });
           } else if (name) {
             yield new ConvertedFile(name, value.type, value.stream);
