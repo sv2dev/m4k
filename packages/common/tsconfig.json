@@ -6,6 +6,5 @@
     "composite": true
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.spec.ts"],
-  "references": [{ "path": "../common" }]
+  "exclude": ["src/**/*.spec.ts"]
 }

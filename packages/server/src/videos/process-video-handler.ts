@@ -1,7 +1,6 @@
-import { ConvertedFile, type VideoOptimizerOptions } from "@m4k/types";
 import { Type as T } from "@sinclair/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
-import { getExtension, optimizeVideo } from "m4k";
+import { ConvertedFile, getExtension, optimizeVideo, type VideoOptimizerOptions } from "m4k";
 import { mkdir, rm } from "node:fs/promises";
 import { basename } from "node:path";
 import { parseOpts } from "../util/request-parsing";
@@ -28,7 +27,7 @@ export const optionsSchema = T.Object({
 
 const compiledOptionsSchema = TypeCompiler.Compile(optionsSchema);
 
-export async function processVideo(request: Request) {
+export async function processVideoHandler(request: Request) {
   let optsArr: (VideoOptimizerOptions & { output?: string; name?: string })[];
   try {
     optsArr = parseOpts(request, compiledOptionsSchema);

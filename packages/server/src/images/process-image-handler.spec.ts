@@ -1,12 +1,12 @@
+import { streamParts } from "@sv2dev/multipart-stream";
+import { describe, expect, it } from "bun:test";
 import type {
   ImageOptimizerOptions,
   ProcessingError,
   Progress,
   QueuePosition,
-} from "@m4k/types";
-import { streamParts } from "@sv2dev/multipart-stream";
-import { describe, expect, it } from "bun:test";
-import { server } from "../server";
+} from "m4k";
+import { processImageHandler } from "./process-image-handler";
 
 const fixture = Bun.file("../../fixtures/image.jpeg");
 
@@ -17,7 +17,7 @@ describe("/process", () => {
       height: "1000",
       format: "jpeg",
     });
-    const response = await server.fetch(
+    const response = await processImageHandler(
       new Request(`http://localhost:3000/images/process?${query}`, {
         method: "POST",
         body: fixture,
@@ -40,13 +40,13 @@ describe("/process", () => {
       width: "100",
       height: "1000",
     });
-    const r1 = server.fetch(
+    const r1 = processImageHandler(
       new Request(`http://localhost:3000/images/process?${query}`, {
         method: "POST",
         body: fixture,
       })
     );
-    const r2 = server.fetch(
+    const r2 = processImageHandler(
       new Request(`http://localhost:3000/images/process?${query}`, {
         method: "POST",
         body: fixture,
@@ -72,7 +72,7 @@ describe("/process", () => {
 
   it("should throw if format is invalid", async () => {
     const query = new URLSearchParams({ format: "x" });
-    const res = await server.fetch(
+    const res = await processImageHandler(
       new Request(`http://localhost:3000/images/process?${query}`, {
         method: "POST",
         body: fixture,
@@ -84,7 +84,7 @@ describe("/process", () => {
   });
 
   it("should return 400 if no options are provided", async () => {
-    const res = await server.fetch(
+    const res = await processImageHandler(
       new Request(`http://localhost:3000/images/process`, {
         method: "POST",
         body: fixture,
@@ -96,7 +96,7 @@ describe("/process", () => {
   });
 
   it("should return 400 if X-Options header is not valid JSON", async () => {
-    const res = await server.fetch(
+    const res = await processImageHandler(
       new Request(`http://localhost:3000/images/process`, {
         method: "POST",
         body: fixture,
@@ -109,7 +109,7 @@ describe("/process", () => {
   });
 
   it("should process multiple images", async () => {
-    const response = await server.fetch(
+    const response = await processImageHandler(
       new Request(`http://localhost:3000/images/process`, {
         method: "POST",
         body: fixture,

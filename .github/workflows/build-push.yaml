@@ -11,6 +11,7 @@ jobs:
     name: Check if version changed
     runs-on: ubuntu-latest
     outputs:
+      common-changed: ${{ steps.check.outputs.common-changed }}
       core-changed: ${{ steps.check.outputs.core-changed }}
       server-changed: ${{ steps.check.outputs.server-changed }}
       client-changed: ${{ steps.check.outputs.client-changed }}
@@ -32,21 +33,48 @@ jobs:
             fi
           }
 
+          CURRENT_COMMON_VERSION=$(get_version "packages/common/package.json")
           CURRENT_CORE_VERSION=$(get_version "packages/core/package.json")
           CURRENT_SERVER_VERSION=$(get_version "packages/server/package.json")
           CURRENT_CLIENT_VERSION=$(get_version "packages/client/package.json")
           git checkout HEAD^
+          PREVIOUS_COMMON_VERSION=$(get_version "packages/common/package.json")
           PREVIOUS_CORE_VERSION=$(get_version "packages/core/package.json")
           PREVIOUS_SERVER_VERSION=$(get_version "packages/server/package.json")
           PREVIOUS_CLIENT_VERSION=$(get_version "packages/client/package.json")
 
+          common_changed=$([ "$CURRENT_COMMON_VERSION" != "$PREVIOUS_COMMON_VERSION" ] && echo "true" || echo "false")
           core_changed=$([ "$CURRENT_CORE_VERSION" != "$PREVIOUS_COREVERSION" ] && echo "true" || echo "false")
           server_changed=$([ "$CURRENT_SERVER_VERSION" != "$PREVIOUS_SERVER_VERSION" ] && echo "true" || echo "false")
           client_changed=$([ "$CURRENT_CLIENT_VERSION" != "$PREVIOUS_CLIENT_VERSION" ] && echo "true" || echo "false")
+          echo "common-changed=$common_changed" >> "$GITHUB_OUTPUT"
           echo "core-changed=$core_changed" >> "$GITHUB_OUTPUT"
           echo "server-changed=$server_changed" >> "$GITHUB_OUTPUT"
           echo "client-changed=$client_changed" >> "$GITHUB_OUTPUT"
           echo "server-version=$CURRENT_SERVER_VERSION" >> "$GITHUB_OUTPUT"
+  publish-common:
+    name: Publish common package
+    needs: check-version
+    if: needs.check-version.outputs.common-changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.5
+          registry-url: "https://registry.npmjs.org/"
+      - run: |
+          bun install
+          bun run build
+      - name: Publish package
+        run: bun publish --access public
+        working-directory: ./packages/common
+        env:
+          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
   publish-core:
     name: Publish core package
     needs: check-version
@@ -60,7 +88,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.2.4
+          bun-version: 1.2.5
           registry-url: "https://registry.npmjs.org/"
       - run: |
           bun install
@@ -84,7 +112,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.2.4
+          bun-version: 1.2.5
           registry-url: "https://registry.npmjs.org/"
       - run: |
           bun install
@@ -108,7 +136,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.2.4
+          bun-version: 1.2.5
           registry-url: "https://registry.npmjs.org/"
       - run: |
           bun install

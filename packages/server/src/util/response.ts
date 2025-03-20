@@ -1,4 +1,4 @@
-import { ConvertedFile } from "@m4k/types";
+import { ConvertedFile } from "m4k";
 import { basename } from "node:path";
 import { BOUNDARY, MultipartMixed } from "./multipart-mixed";
 

@@ -1,7 +1,7 @@
-import type { ProcessingError, Progress, QueuePosition } from "@m4k/types";
 import { streamParts } from "@sv2dev/multipart-stream";
 import { describe, expect, it } from "bun:test";
-import { server } from "../server";
+import type { ProcessingError, Progress, QueuePosition } from "m4k";
+import { processVideoHandler } from "./process-video-handler";
 
 const fixture = Bun.file(`../../fixtures/video.mp4`);
 
@@ -10,7 +10,7 @@ describe("/process", () => {
     const query = new URLSearchParams({
       format: "mp4",
     });
-    const response = await server.fetch(
+    const response = await processVideoHandler(
       new Request(`http://localhost:3000/videos/process?${query}`, {
         method: "POST",
         body: fixture,
@@ -30,7 +30,7 @@ describe("/process", () => {
     const query = new URLSearchParams({
       format: "mp4",
     });
-    const res1 = await server.fetch(
+    const res1 = await processVideoHandler(
       new Request(`http://localhost:3000/videos/process?${query}`, {
         method: "POST",
         body: fixture,
@@ -38,7 +38,7 @@ describe("/process", () => {
     );
     const coll1 = await collectResponse(res1);
 
-    const res2 = await server.fetch(
+    const res2 = await processVideoHandler(
       new Request(`http://localhost:3000/videos/process?${query}`, {
         method: "POST",
         body: fixture,
@@ -61,14 +61,14 @@ describe("/process", () => {
     const query = new URLSearchParams({
       format: "mp4",
     });
-    const res1 = server.fetch(
+    const res1 = processVideoHandler(
       new Request(`http://localhost:3000/videos/process?${query}`, {
         method: "POST",
         body: fixture,
       })
     );
     await Bun.sleep(0); // Make sure the first request is queued
-    const res2 = server.fetch(
+    const res2 = processVideoHandler(
       new Request(`http://localhost:3000/videos/process?${query}`, {
         method: "POST",
         body: fixture,
@@ -91,7 +91,7 @@ describe("/process", () => {
       output: "/tmp/test-output.mp4",
     });
 
-    const response = await server.fetch(
+    const response = await processVideoHandler(
       new Request(`http://localhost:3000/videos/process?${query}`, {
         method: "POST",
         body: fixture,
@@ -113,7 +113,7 @@ describe("/process", () => {
   });
 
   it("should return 400 if no options are provided", async () => {
-    const response = await server.fetch(
+    const response = await processVideoHandler(
       new Request(`http://localhost:3000/videos/process`, {
         method: "POST",
         body: fixture,
@@ -125,7 +125,7 @@ describe("/process", () => {
   });
 
   it("should return 400 if options are invalid json", async () => {
-    const response = await server.fetch(
+    const response = await processVideoHandler(
       new Request(`http://localhost:3000/videos/process`, {
         method: "POST",
         body: fixture,
@@ -138,7 +138,7 @@ describe("/process", () => {
   });
 
   it("should return 400 if options are invalid", async () => {
-    const response = await server.fetch(
+    const response = await processVideoHandler(
       new Request(`http://localhost:3000/videos/process`, {
         method: "POST",
         body: fixture,

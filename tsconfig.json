@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     // Enable latest features
-    "lib": ["ESNext", "DOM"],
+    "lib": ["ESNext", "DOM", "ESNext.AsyncIterable"],
     "target": "ESNext",
     "module": "ESNext",
     "moduleDetection": "force",
@@ -10,6 +10,8 @@
     "moduleResolution": "bundler",
     "verbatimModuleSyntax": true,
     "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
 
     // Best practices
     "strict": true,

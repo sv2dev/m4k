@@ -3,7 +3,7 @@ import {
   type ProcessingError,
   type Progress,
   type QueuePosition,
-} from "@m4k/types";
+} from "@m4k/common";
 import { afterAll, describe, expect, it } from "bun:test";
 import { rm } from "node:fs/promises";
 import { optimizeVideo, videoQueue } from "./video-optimizer";

@@ -24,19 +24,19 @@ export type ImageOptimizerOptions = {
   };
   /** The format of the output file. */
   format?:
-    | "avif"
-    | "jpeg"
-    | "png"
-    | "webp"
-    | "tiff"
-    | "dz"
-    | "ppm"
-    | "fits"
-    | "gif"
-    | "svg"
-    | "heif"
-    | "pdf"
-    | "jp2";
+  | "avif"
+  | "jpeg"
+  | "png"
+  | "webp"
+  | "tiff"
+  | "dz"
+  | "ppm"
+  | "fits"
+  | "gif"
+  | "svg"
+  | "heif"
+  | "pdf"
+  | "jp2";
   /** The quality of the output file. */
   quality?: number;
   /** Whether to keep the metadata of the image. */
@@ -58,6 +58,10 @@ export type ImageOptimizerOptions = {
     /** The height of the crop. */
     height: number;
   };
+  /** The name of the output file. */
+  name?: string;
+  /** The output path of the file. */
+  output?: string;
 };
 
 export type VideoOptimizerOptions = {
@@ -91,6 +95,10 @@ export type VideoOptimizerOptions = {
   videoCodec?: string;
   /** The filters to apply to the video. */
   videoFilters?: string;
+  /** The name of the output file. */
+  name?: string;
+  /** The output path of the file. */
+  output?: string;
 };
 
 export class ConvertedFile {
@@ -98,5 +106,5 @@ export class ConvertedFile {
     readonly name: string,
     readonly type: string,
     readonly stream?: AsyncIterable<Uint8Array>
-  ) {}
+  ) { }
 }

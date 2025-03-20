@@ -5,8 +5,14 @@ import {
   type Progress,
   type QueuePosition,
   type VideoOptimizerOptions,
-} from "@m4k/types";
+} from "@m4k/common";
 import { iterableToStream, streamParts } from "@sv2dev/multipart-stream";
+
+let f = fetch;
+
+export function setFetch(ftch: typeof fetch) {
+  f = ftch;
+}
 
 export async function* optimizeImage(
   host: string,
@@ -37,11 +43,11 @@ async function* optimizeFetch<T>(
   input: ReadableStream<Uint8Array> | AsyncIterable<Uint8Array> | Blob,
   opts: any
 ) {
-  const res = await fetch(url, {
+  const res = await f(new Request(url, {
     method: "POST",
     body: inputToStream(input),
     headers: { "X-Options": JSON.stringify(opts) },
-  });
+  }));
   if (!res.ok) {
     throw new Error(
       `Failed to optimize: [${res.statusText}] ${await res.text()}`

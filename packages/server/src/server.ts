@@ -1,8 +1,8 @@
-import type { Server } from "bun";
-import { processImages } from "./images/image-router";
-import { processVideo } from "./videos/video-router";
+import type { ServeOptions, Server } from "bun";
+import { processImageHandler } from "./images/process-image-handler";
+import { processVideoHandler } from "./videos/process-video-handler";
 
-export const server = Bun.serve({
+export const serveOpts: ServeOptions = {
   maxRequestBodySize: 2 ** 40, // 1TB
   fetch: async (req, server) => {
     const { pathname } = new URL(req.url);
@@ -18,15 +18,13 @@ export const server = Bun.serve({
       return new Response("Internal server error", { status: 500 });
     }
   },
-  hostname: Bun.env.HOSTNAME,
-  port: Bun.env.PORT,
-  idleTimeout: 180, // 3 minutes
-});
+  idleTimeout: 180,
+};
 
 const routes = {
   POST: {
-    "/images/process": processImages,
-    "/videos/process": processVideo,
+    "/images/process": processImageHandler,
+    "/videos/process": processVideoHandler,
   },
 } as Partial<
   Record<
@@ -39,5 +37,3 @@ const routes = {
     >
   >
 >;
-
-console.log(`Server is running on ${server.hostname}:${server.port}`);

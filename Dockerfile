@@ -1,9 +1,10 @@
-FROM oven/bun:1.2.4-slim AS base
+FROM oven/bun:1.2.5-slim AS base
 WORKDIR /app
 
 FROM base AS build
 COPY . .
 RUN bun install && \
+    cd packages/server && \
     bun run build && \
     bun run build:docker
 
@@ -18,7 +19,6 @@ ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0 \
     FFMPEG_PATH=/usr/local/bin/ffmpeg
 COPY --from=mwader/static-ffmpeg:7.1 /ffmpeg /usr/local/bin/
-COPY --from=mwader/static-ffmpeg:7.1 /ffprobe /usr/local/bin/
 COPY --from=build /app/packages/server/dist/server/app.js /app/app.js
 COPY --from=install /app/node_modules/ /app/node_modules/
 EXPOSE 3000

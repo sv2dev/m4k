@@ -1,4 +1,4 @@
-import { type ImageOptimizerOptions, ConvertedFile } from "@m4k/types";
+import { type ImageOptimizerOptions, ConvertedFile } from "@m4k/common";
 import sharp from "sharp";
 import { createQueue } from "tasque";
 import { readableFromWeb, readableToWeb } from "../util/streams";
