@@ -1,6 +1,6 @@
 {
   "name": "@m4k/client",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "module": "./lib/index.js",
   "main": "./lib/index.js",
@@ -15,7 +15,7 @@
   "devDependencies": {
     "@m4k/server": "workspace:^",
     "@sv2dev/multipart-stream": "^0.2.0",
-    "@types/bun": "^1.2.4",
+    "@types/bun": "^1.2.5",
     "typescript": "^5.0.0"
   },
   "dependencies": {

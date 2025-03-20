@@ -1,6 +1,6 @@
 {
   "name": "@m4k/server",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -16,7 +16,7 @@
   },
   "devDependencies": {
     "@sinclair/typebox": "^0.34.30",
-    "@types/bun": "^1.2.4",
+    "@types/bun": "^1.2.5",
     "typescript": "^5.0.0"
   },
   "dependencies": {

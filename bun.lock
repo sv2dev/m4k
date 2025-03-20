@@ -9,14 +9,14 @@
     },
     "packages/client": {
       "name": "@m4k/client",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "@m4k/common": "workspace:^",
       },
       "devDependencies": {
         "@m4k/server": "workspace:^",
         "@sv2dev/multipart-stream": "^0.2.0",
-        "@types/bun": "^1.2.4",
+        "@types/bun": "^1.2.5",
         "typescript": "^5.0.0",
       },
     },
@@ -29,7 +29,7 @@
     },
     "packages/core": {
       "name": "m4k",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "dependencies": {
         "@m4k/common": "workspace:^",
       },
@@ -44,13 +44,13 @@
     },
     "packages/server": {
       "name": "@m4k/server",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "m4k": "workspace:^",
       },
       "devDependencies": {
         "@sinclair/typebox": "^0.34.30",
-        "@types/bun": "^1.2.4",
+        "@types/bun": "^1.2.5",
         "typescript": "^5.0.0",
       },
     },
