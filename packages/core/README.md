@@ -8,10 +8,10 @@ It provides queueing and progress reporting via async iterables.
 Image optimization happens completely in memory.
 
 ```ts
-import { optimizeImage, ConvertedFile } from "m4k";
-// input is a ReadableStream or Blob
-for await (const value of optimizeImage(input, opts)) {
-  if (value instanceof ConvertedFile) {
+import { processImage, ProcessedFile } from "m4k";
+// input is a AsyncIterable or Blob
+for await (const value of processImage(input, opts)) {
+  if (value instanceof ProcessedFile) {
     // do something with the file
   }
 }
@@ -20,10 +20,10 @@ for await (const value of optimizeImage(input, opts)) {
 For lower memory usage, video optimization happens with files.
 
 ```ts
-import { optimizeVideo, ConvertedFile } from "m4k";
+import { processVideo, ProcessedFile } from "m4k";
 // input is a file path
-for await (const value of optimizeVideo(input, opts)) {
-  if (value instanceof ConvertedFile) {
+for await (const value of processVideo(input, opts)) {
+  if (value instanceof ProcessedFile) {
     // do something with the file
   }
 }

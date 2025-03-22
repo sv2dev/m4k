@@ -1,3 +1,2 @@
-export { ConvertedFile } from "@m4k/common";
-export { optimizeImage, optimizeVideo, setFetch } from "./client";
-
+export { ProcessedFile } from "@m4k/common";
+export { processImage, processVideo, setFetch } from "./client";

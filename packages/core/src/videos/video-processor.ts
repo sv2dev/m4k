@@ -1,14 +1,14 @@
-import { ConvertedFile, type VideoOptimizerOptions } from "@m4k/common";
+import { ProcessedFile, type VideoOptions } from "@m4k/common";
 import { spawn } from "node:child_process";
 import { getRandomValues } from "node:crypto";
 import { mkdir, rm } from "node:fs/promises";
 import { createQueue } from "tasque";
 import { mimeTypes } from "../util/mime";
 
-export function optimizeVideo(
+export function processVideo(
   inputPath: string,
-  opts: VideoOptimizerOptions,
-  signal?: AbortSignal
+  opts: VideoOptions,
+  { signal }: { signal?: AbortSignal } = {}
 ) {
   const iterable = videoQueue.iterate(async function* () {
     await mkdir(tmpVideoDir, { recursive: true });
@@ -80,7 +80,7 @@ export function optimizeVideo(
       if (code !== 0) {
         throw new Error(`ffmpeg exited with code ${code}: ${errStr}`);
       }
-      yield new ConvertedFile(outputPath, mimeTypes[opts.format ?? "mp4"]);
+      yield new ProcessedFile(outputPath, mimeTypes[opts.format ?? "mp4"]);
     } finally {
       await rm(outputPath, { force: true });
     }

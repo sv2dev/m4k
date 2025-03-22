@@ -8,11 +8,11 @@ It provides queueing and progress reporting via async iterables.
 Converting images:
 
 ```ts
-import { optimizeImage, ConvertedFile } from "@m4k/client";
+import { processImage, ProcessedFile } from "@m4k/client";
 // host is the URL of the media kit server
-// input is a ReadableStream or Blob
-for await (const value of optimizeImage(host, input, opts)) {
-  if (value instanceof ConvertedFile) {
+// input is a AsyncIterable or Blob
+for await (const value of processImage(host, input, opts)) {
+  if (value instanceof ProcessedFile) {
     // do something with the file
   } else if ("position" in value) {
     // do something with the queue position
@@ -27,11 +27,11 @@ for await (const value of optimizeImage(host, input, opts)) {
 Converting videos:
 
 ```ts
-import { optimizeVideo, ConvertedFile } from "@m4k/client";
+import { processVideo, ProcessedFile } from "@m4k/client";
 // host is the URL of the media kit server
 // input is a file path
-for await (const value of optimizeVideo(host, input, opts)) {
-  if (value instanceof ConvertedFile) {
+for await (const value of processVideo(host, input, opts)) {
+  if (value instanceof ProcessedFile) {
     // do something with the file
   } else if ("position" in value) {
     // do something with the queue position

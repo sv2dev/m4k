@@ -1,20 +1,20 @@
 import {
-  ConvertedFile,
+  ProcessedFile,
   type ProcessingError,
   type Progress,
   type QueuePosition,
 } from "@m4k/common";
 import { afterAll, describe, expect, it } from "bun:test";
 import { rm } from "node:fs/promises";
-import { optimizeVideo, videoQueue } from "./video-optimizer";
+import { processVideo, videoQueue } from "./video-processor";
 
 const fixture = Bun.file(`../../fixtures/video.mp4`);
 
 afterAll(async () => rm("/tmp/videos", { force: true, recursive: true }));
 
-describe("optimizeVideo()", () => {
+describe("processVideo()", () => {
   it("should process a video", async () => {
-    const iterable = optimizeVideo(fixture.name!, { format: "mp4" })!;
+    const iterable = processVideo(fixture.name!, { format: "mp4" })!;
 
     const collected = await collect(iterable);
 
@@ -33,14 +33,14 @@ describe("optimizeVideo()", () => {
   });
 
   it("should process multiple videos in sequence", async () => {
-    const iterable1 = optimizeVideo(fixture.name!, { format: "mp4" })!;
+    const iterable1 = processVideo(fixture.name!, { format: "mp4" })!;
 
     const collected = await collect(iterable1);
 
     expect(collected[0]).toEqual({ position: 0 });
     expect((collected.at(-1) as { size: number }).size).toBeGreaterThan(10000);
 
-    const iterable2 = optimizeVideo(fixture.name!, { format: "mp4" })!;
+    const iterable2 = processVideo(fixture.name!, { format: "mp4" })!;
 
     const collected2 = await collect(iterable2);
 
@@ -49,8 +49,8 @@ describe("optimizeVideo()", () => {
   });
 
   it("should enqueue processing multiple videos ", async () => {
-    const iterable1 = optimizeVideo(fixture.name!, { format: "mp4" })!;
-    const iterable2 = optimizeVideo(fixture.name!, { format: "mp4" })!;
+    const iterable1 = processVideo(fixture.name!, { format: "mp4" })!;
+    const iterable2 = processVideo(fixture.name!, { format: "mp4" })!;
 
     const [collected1, collected2] = await Promise.all([
       collect(iterable1),
@@ -68,7 +68,7 @@ describe("optimizeVideo()", () => {
 
 async function collect(
   iterable: AsyncIterable<
-    QueuePosition | Progress | ProcessingError | ConvertedFile
+    QueuePosition | Progress | ProcessingError | ProcessedFile
   >
 ) {
   const collected: (
@@ -78,7 +78,7 @@ async function collect(
     | { filename: string; type: string; size: number }
   )[] = [];
   for await (const part of iterable) {
-    if (part instanceof ConvertedFile) {
+    if (part instanceof ProcessedFile) {
       const f = Bun.file(part.name);
       collected.push({
         filename: f.name!,

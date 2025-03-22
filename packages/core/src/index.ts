@@ -1,8 +1,8 @@
 export * from "@m4k/common";
-export { imageQueue, optimizeImage } from "./images/image-optimizer";
+export { imageQueue, processImage } from "./images/image-processor";
 export {
   getExtension,
-  optimizeVideo,
+  processVideo,
   tmpVideoDir,
-  videoQueue
-} from "./videos/video-optimizer";
+  videoQueue,
+} from "./videos/video-processor";

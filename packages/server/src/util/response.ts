@@ -1,4 +1,4 @@
-import { ConvertedFile } from "m4k";
+import { ProcessedFile } from "m4k";
 import { basename } from "node:path";
 import { BOUNDARY, MultipartMixed } from "./multipart-mixed";
 
@@ -16,7 +16,7 @@ export function stream(readable: ReadableStream) {
 }
 
 export async function queueAndStream(
-  iterable: AsyncIterable<{} | ConvertedFile | Blob>
+  iterable: AsyncIterable<{} | ProcessedFile | Blob>
 ) {
   const multipart = new MultipartMixed();
   iterate();
@@ -28,7 +28,7 @@ export async function queueAndStream(
     }, KEEP_ALIVE_INTERVAL);
     try {
       for await (const x of iterable) {
-        if (x instanceof ConvertedFile) {
+        if (x instanceof ProcessedFile) {
           clear();
           multipart.part({
             contentType: x.type,

@@ -1,6 +1,11 @@
 import { Type as T } from "@sinclair/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
-import { ConvertedFile, getExtension, optimizeVideo, type VideoOptimizerOptions } from "m4k";
+import {
+  ProcessedFile,
+  getExtension,
+  processVideo,
+  type VideoOptions,
+} from "m4k";
 import { mkdir, rm } from "node:fs/promises";
 import { basename } from "node:path";
 import { parseOpts } from "../util/request-parsing";
@@ -28,7 +33,7 @@ export const optionsSchema = T.Object({
 const compiledOptionsSchema = TypeCompiler.Compile(optionsSchema);
 
 export async function processVideoHandler(request: Request) {
-  let optsArr: (VideoOptimizerOptions & { output?: string; name?: string })[];
+  let optsArr: (VideoOptions & { output?: string; name?: string })[];
   try {
     optsArr = parseOpts(request, compiledOptionsSchema);
   } catch (err) {
@@ -50,19 +55,21 @@ export async function processVideoHandler(request: Request) {
     await writer.flush();
   }
   await writer.end();
-  const iterable = optimizeVideo(inputFile.name!, opts, request.signal);
+  const iterable = processVideo(inputFile.name!, opts, {
+    signal: request.signal,
+  });
   if (!iterable) return error(409, "Queue is full");
 
   return queueAndStream(
     (async function* () {
       try {
         for await (const value of iterable) {
-          if (value instanceof ConvertedFile) {
+          if (value instanceof ProcessedFile) {
             if (opts.output) {
               await Bun.write(Bun.file(opts.output), Bun.file(value.name));
               await rm(value.name, { force: true });
             } else {
-              yield new ConvertedFile(
+              yield new ProcessedFile(
                 opts.name ?? basename(value.name),
                 value.type,
                 value.stream ?? Bun.file(value.name).stream()

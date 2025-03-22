@@ -1,5 +1,7 @@
 services:
-  video-optimizer:
+  m4k:
     build: .
     ports:
       - 3000:3000
+    volumes:
+      - ./output:/output
