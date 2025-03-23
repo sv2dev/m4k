@@ -4,12 +4,13 @@
     "": {
       "name": "m4k-workspaces",
       "devDependencies": {
+        "husky": "^9.1.7",
         "typescript": "^5.0.0",
       },
     },
     "packages/client": {
       "name": "@m4k/client",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "dependencies": {
         "@m4k/common": "workspace:^",
       },
@@ -44,7 +45,7 @@
     },
     "packages/server": {
       "name": "@m4k/server",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "dependencies": {
         "m4k": "workspace:^",
       },
@@ -141,6 +142,8 @@
     "color-string": ["color-string@1.9.1", "", { "dependencies": { "color-name": "^1.0.0", "simple-swizzle": "^0.2.2" } }, "sha512-shrVawQFojnZv6xM40anx4CkoDP+fZsw/ZerEMsW/pyzsRbElpsL/DBVW7q3ExxwusdNXI3lXpuhEZkzs8p5Eg=="],
 
     "detect-libc": ["detect-libc@2.0.3", "", {}, "sha512-bwy0MGW55bG41VqxxypOsdSdGqLwXPI/focwgTYCFMbdUiBAxLg9CFzG08sz2aqzknwiX7Hkl0bQENjg8iLByw=="],
+
+    "husky": ["husky@9.1.7", "", { "bin": { "husky": "bin.js" } }, "sha512-5gs5ytaNjBrh5Ow3zrvdUUY+0VxIuWVL4i9irt6friV+BqdCfmV11CQTWMiBYWHbXhco+J1kHfTOUkePhCDvMA=="],
 
     "is-arrayish": ["is-arrayish@0.3.2", "", {}, "sha512-eVRqCvVlZbuw3GrM63ovNSNAeA1K16kaR/LRY/92w0zxQ5/1YzwblUX652i4Xs9RwAGjW9d9y6X88t8OaAJfWQ=="],
 
