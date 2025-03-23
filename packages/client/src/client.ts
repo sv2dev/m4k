@@ -14,6 +14,13 @@ export function setFetch(ftch: typeof fetch) {
   f = ftch;
 }
 
+/**
+ * Process an image.
+ * @param host - The host of the server.
+ * @param input - The input image. Can be a stream or a blob.
+ * @param opts - The options for the image processing.
+ * @returns An iterable of the processed images.
+ */
 export async function* processImage(
   host: string,
   input: AsyncIterable<Uint8Array> | Blob,
@@ -26,6 +33,13 @@ export async function* processImage(
   );
 }
 
+/**
+ * Process a video.
+ * @param host - The host of the server.
+ * @param input - The input video. Can be a stream or a blob.
+ * @param opts - The options for the video processing.
+ * @returns An iterable of the processed videos.
+ */
 export async function* processVideo(
   host: string,
   input: AsyncIterable<Uint8Array> | Blob,

@@ -1,20 +1,29 @@
 import { ProcessedFile, type VideoOptions } from "@m4k/common";
 import { spawn } from "node:child_process";
 import { getRandomValues } from "node:crypto";
+import { createWriteStream } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import { createQueue } from "tasque";
 import { mimeTypes } from "../util/mime";
+import { exhaustAsyncIterableToWritable } from "../util/streams";
 
+/**
+ * Process a video.
+ * @param input - The input video. Can be a file path, a stream or a blob.
+ * @param opts - The options for the video processing.
+ * @param signal - An optional abort signal.
+ * @returns An iterable of the processed videos.
+ */
 export function processVideo(
-  inputPath: string,
+  input: string | AsyncIterable<Uint8Array> | Blob,
   opts: VideoOptions,
   { signal }: { signal?: AbortSignal } = {}
 ) {
+  const inputPath = typeof input === "string" ? input : createInputFile(input);
   const iterable = videoQueue.iterate(async function* () {
-    await mkdir(tmpVideoDir, { recursive: true });
-    const outputPath = `${tmpVideoDir}/out-${Buffer.from(
-      getRandomValues(new Uint8Array(16))
-    ).toString("base64url")}.${getExtension(opts.format ?? "mp4")}`;
+    const outputPath = `${tmpVideoDir}/out-${randomId()}.${getExtension(
+      opts.format ?? "mp4"
+    )}`;
 
     const inArgs = [] as string[];
     if (opts.inputFormat) inArgs.push("-f", opts.inputFormat);
@@ -38,7 +47,7 @@ export function processVideo(
     try {
       const child = spawn(
         ffmpeg,
-        ["-y", ...inArgs, "-i", inputPath, ...outArgs, outputPath],
+        ["-y", ...inArgs, "-i", await inputPath, ...outArgs, outputPath],
         { stdio: ["pipe", "pipe", "pipe"], signal }
       );
       const decoder = new TextDecoder();
@@ -83,6 +92,9 @@ export function processVideo(
       yield new ProcessedFile(outputPath, mimeTypes[opts.format ?? "mp4"]);
     } finally {
       await rm(outputPath, { force: true });
+      if (typeof inputPath !== "string") {
+        await rm(await inputPath, { force: true });
+      }
     }
   }, signal);
   if (!iterable) return null;
@@ -104,12 +116,33 @@ export function getExtension(format: string) {
   return extMap[format] ?? format;
 }
 
+/**
+ * The queue for video processing.
+ */
 export const videoQueue = createQueue({
   parallelize: Number(process.env.VIDEO_PARALLELIZE ?? 1),
   max: Number(process.env.VIDEO_QUEUE_SIZE ?? 5),
 });
 
-export const tmpVideoDir = `${process.env.TMP_DIR ?? "/tmp"}/videos`;
+const tmpVideoDir = `${process.env.M4K_TMP_DIR ?? "/tmp/m4k"}/videos`;
+
+await mkdir(tmpVideoDir, { recursive: true });
+
+async function createInputFile(
+  input: AsyncIterable<Uint8Array<ArrayBufferLike>> | Blob
+) {
+  const filePath = `${tmpVideoDir}/in-${randomId()}`;
+  const writer = createWriteStream(filePath);
+  await exhaustAsyncIterableToWritable(
+    "stream" in input ? input.stream() : input,
+    writer
+  );
+  return filePath;
+}
+
+function randomId() {
+  return Buffer.from(getRandomValues(new Uint8Array(16))).toString("base64url");
+}
 
 function parseDuration(metadataStr: string) {
   const match = metadataStr.match(/Duration: (\d+:\d+:\d+\.\d+)/);

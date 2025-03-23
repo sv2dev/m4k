@@ -1,12 +1,7 @@
 import { Type as T } from "@sinclair/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
-import {
-  ProcessedFile,
-  getExtension,
-  processVideo,
-  type VideoOptions,
-} from "m4k";
-import { mkdir, rm } from "node:fs/promises";
+import { ProcessedFile, processVideo, type VideoOptions } from "m4k";
+import { rm } from "node:fs/promises";
 import { basename } from "node:path";
 import { parseOpts } from "../util/request-parsing";
 import { error, queueAndStream } from "../util/response";
@@ -42,45 +37,28 @@ export async function processVideoHandler(request: Request) {
   if (optsArr.length === 0) return error(400, "No options provided");
   // Currently only one option is supported
   const [opts] = optsArr;
-  await mkdir(`/tmp/videos`, { recursive: true });
-  const inputFile = Bun.file(
-    `/tmp/videos/${Bun.randomUUIDv7("base64url")}.${getExtension(
-      opts.inputFormat ?? "mp4"
-    )}`
-  );
-
-  const writer = inputFile.writer();
-  for await (const chunk of request.body as unknown as AsyncIterable<Uint8Array>) {
-    writer.write(chunk);
-    await writer.flush();
-  }
-  await writer.end();
-  const iterable = processVideo(inputFile.name!, opts, {
+  const iterable = processVideo(request.body!, opts, {
     signal: request.signal,
   });
   if (!iterable) return error(409, "Queue is full");
 
   return queueAndStream(
     (async function* () {
-      try {
-        for await (const value of iterable) {
-          if (value instanceof ProcessedFile) {
-            if (opts.output) {
-              await Bun.write(Bun.file(opts.output), Bun.file(value.name));
-              await rm(value.name, { force: true });
-            } else {
-              yield new ProcessedFile(
-                opts.name ?? basename(value.name),
-                value.type,
-                value.stream ?? Bun.file(value.name).stream()
-              );
-            }
+      for await (const value of iterable) {
+        if (value instanceof ProcessedFile) {
+          if (opts.output) {
+            await Bun.write(Bun.file(opts.output), Bun.file(value.name));
+            await rm(value.name, { force: true });
           } else {
-            yield value;
+            yield new ProcessedFile(
+              opts.name ?? basename(value.name),
+              value.type,
+              value.stream ?? Bun.file(value.name).stream()
+            );
           }
+        } else {
+          yield value;
         }
-      } finally {
-        await rm(inputFile.name!, { force: true });
       }
     })()
   );

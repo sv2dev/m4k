@@ -1,12 +1,21 @@
 import { type ImageOptions, ProcessedFile } from "@m4k/common";
-import { type Writable } from "node:stream";
+import { createReadStream } from "node:fs";
 import sharp from "sharp";
 import { createQueue } from "tasque";
+import { exhaustAsyncIterableToWritable } from "../util/streams";
+
 export type Format = Required<ImageOptions>["format"];
 export type Fit = Required<Required<ImageOptions>["resize"]>["fit"];
 
+/**
+ * Process an image.
+ * @param input - The input image. Can be a file path, a stream or a blob.
+ * @param opts - The options for the image processing.
+ * @param signal - An optional abort signal.
+ * @returns An iterable of the processed images.
+ */
 export function processImage(
-  input: AsyncIterable<Uint8Array> | Blob,
+  input: string | AsyncIterable<Uint8Array> | Blob,
   opts: ImageOptions | ImageOptions[],
   { signal }: { signal?: AbortSignal } = {}
 ) {
@@ -14,7 +23,11 @@ export function processImage(
   const iterable = imageQueue.iterate(async function* () {
     opts = Array.isArray(opts) ? opts : [opts];
     void exhaustAsyncIterableToWritable(
-      "stream" in input ? input.stream() : input,
+      typeof input === "string"
+        ? createReadStream(input)
+        : "stream" in input
+        ? input.stream()
+        : input,
       sharpInstance
     );
 
@@ -77,19 +90,10 @@ export function processImage(
   })();
 }
 
+/**
+ * The queue for image processing.
+ */
 export const imageQueue = createQueue({
   parallelize: Number(process.env.IMAGE_PARALLELIZE ?? 5),
   max: Number(process.env.IMAGE_QUEUE_SIZE ?? 100),
 });
-
-async function exhaustAsyncIterableToWritable(
-  it: AsyncIterable<Uint8Array>,
-  writable: Writable
-) {
-  for await (const chunk of it) {
-    if (!writable.write(chunk))
-      await new Promise((resolve) => writable.once("drain", resolve));
-  }
-  writable.end();
-  await new Promise((resolve) => writable.on("finish", resolve));
-}
