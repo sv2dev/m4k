@@ -77,6 +77,7 @@ const querySchema = T.Object({
 const compiledOptionsSchema = TypeCompiler.Compile(optionsSchema);
 
 export async function processImageHandler(request: Request) {
+  if (!request.body) return error(400, "No body provided");
   let optsArr: ImageOptions[];
   try {
     optsArr = parseOpts(request, compiledOptionsSchema, queryToOptions);
@@ -84,7 +85,6 @@ export async function processImageHandler(request: Request) {
     return error(400, (err as RangeError).message);
   }
   if (optsArr.length === 0) return error(400, "No options provided");
-  if (!request.body) return error(400, "No body provided");
 
   const iterable = processImage(request.body, optsArr, {
     signal: request.signal,

@@ -28,6 +28,7 @@ export const optionsSchema = T.Object({
 const compiledOptionsSchema = TypeCompiler.Compile(optionsSchema);
 
 export async function processVideoHandler(request: Request) {
+  if (!request.body) return error(400, "No body provided");
   let optsArr: (VideoOptions & { output?: string; name?: string })[];
   try {
     optsArr = parseOpts(request, compiledOptionsSchema);
@@ -37,7 +38,7 @@ export async function processVideoHandler(request: Request) {
   if (optsArr.length === 0) return error(400, "No options provided");
   // Currently only one option is supported
   const [opts] = optsArr;
-  const iterable = processVideo(request.body!, opts, {
+  const iterable = processVideo(request.body, opts, {
     signal: request.signal,
   });
   if (!iterable) return error(409, "Queue is full");
