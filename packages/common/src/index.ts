@@ -101,6 +101,29 @@ export type VideoOptions = {
   output?: string;
 };
 
+export type AudioOptions = {
+  /** The bitrate of the audio. */
+  bitrate?: number | string;
+  /** The codec of the audio. */
+  codec?: string;
+  /** The complex filters to apply to the audio. */
+  complexFilters?: string;
+  /** The filters to apply to the audio. */
+  filters?: string;
+  /** The duration of the output file. */
+  duration?: number | string;
+  /** The format of the output file. */
+  format?: string;
+  /** The input format of the audio. */
+  inputFormat?: string;
+  /** The seek time of the audio. */
+  seek?: number | string;
+  /** The name of the output file. */
+  name?: string;
+  /** The output path of the file. */
+  output?: string;
+};
+
 export class ProcessedFile {
   constructor(
     readonly name: string,

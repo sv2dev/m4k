@@ -3,13 +3,27 @@
 A media conversion toolkit based on [ffmpeg](https://ffmpeg.org/) and [sharp](https://sharp.pixelplumbing.com/)/[libvips](https://github.com/libvips/libvips).
 It provides queueing and progress reporting via async iterables.
 
+The API is unified for audio, images and videos.
+
 ## Usage
 
-Image optimization happens completely in memory.
+### Processing audio
+
+```ts
+import { processAudio, ProcessedFile } from "m4k";
+// input is a file path or an async iterable of Uint8Arrays or a Blob
+for await (const value of processAudio(input, opts)) {
+  if (value instanceof ProcessedFile) {
+    // do something with the file
+  }
+}
+```
+
+### Processing images
 
 ```ts
 import { processImage, ProcessedFile } from "m4k";
-// input is a AsyncIterable or Blob
+// input is a file path or an async iterable of Uint8Arrays or a Blob
 for await (const value of processImage(input, opts)) {
   if (value instanceof ProcessedFile) {
     // do something with the file
@@ -17,11 +31,11 @@ for await (const value of processImage(input, opts)) {
 }
 ```
 
-For lower memory usage, video optimization happens with files.
+### Processing videos
 
 ```ts
 import { processVideo, ProcessedFile } from "m4k";
-// input is a file path
+// input is a file path or an async iterable of Uint8Arrays or a Blob
 for await (const value of processVideo(input, opts)) {
   if (value instanceof ProcessedFile) {
     // do something with the file

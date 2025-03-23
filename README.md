@@ -6,65 +6,54 @@ The docker image is available at [ghcr.io/sv2dev/media-optimizer](https://github
 
 ## Usage
 
+### Running the server
+
+The [`@m4k/server`](./packages/server) can be deployed as a docker container.
+
 ```bash
-docker run -p 3000:3000 -v $(pwd)/output:/output ghcr.io/sv2dev/media-optimizer:0.0.3
+docker run -p 3000:3000 -v $(pwd)/output:/output ghcr.io/sv2dev/m4k:0.1.2
 ```
 
-## API
+Alternatively, you can install the server as a local package and run it:
 
-### POST /images/process
-
-#### Request
-
-```
-URL: /images/process?<Options|options=OptionsJSON[]>
-Method: POST
-Headers:
-- [X-Options: <OptionsJSON[]>]
-Body: Binary file
+```bash
+bun add @m4k/server
 ```
 
-#### Response
+Note: This server implementation is using Bun as runtime, so it can only be run on a system that has Bun installed.
 
-```
-Status: 200 OK
-Headers:
-- Content-Type: multipart/mixed; boundary=<boundary>
-Body: multipart/mixed body with status updates and the processed files (if no output option was provided)
-```
+Then, run the server:
 
-### POST /videos/process
-
-#### Request
-
-```
-URL: /videos/process?<Options|options=OptionsJSON[]>
-Method: POST
-Headers:
-- [X-Options: <OptionsJSON[]>]
-Body: Binary file
+```bash
+bun run @m4k/server
 ```
 
-#### Response
+Or import the server as a module and embed it in your project:
 
+```ts
+import { serveOpts } from "@m4k/server";
+
+Bun.serve(serveOpts);
 ```
-Status: 200 OK
-Headers:
-- Content-Type: multipart/mixed; boundary=<boundary>
-Body: multipart/mixed body with status updates and the processed files (if no output option was provided)
-```
 
-### Options
+### Using the client
 
-The options can be provided as query parameters or as `X-Options` header.
-Each provided option object will result in a processed output file, which allows you to process the same input file multiple times and create different output files (currently only enabled for images).
+The client is available as a standalone package [@m4k/client](./packages/client). You can use it to connect to the m4k server.
 
-#### Examples
+Example, using the client on Bun:
 
-Using curl with headers, redirecting output to a file (within the container):
+```ts
+import { ProcessedFile, processVideo } from "@m4k/client";
 
-```
-curl -X POST http://localhost:3000/videos/process \
-  -H 'X-Options: {"format": "mp4", "videoCodec": "libsvtav1", "output": "/output/output.mp4"}' \
-  --data-binary @/path/to/input.mov
+for await (const value of processVideo(
+  "http://localhost:3000",
+  Bun.file("fixtures/video.mp4"),
+  { format: "mp4", videoCodec: "libx265", output: "output/video.mp4" }
+)) {
+  if (value instanceof ProcessedFile) {
+    // handle the processed file
+  } else {
+    // handle the status update
+  }
+}
 ```

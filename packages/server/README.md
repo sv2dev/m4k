@@ -12,46 +12,70 @@ docker run -p 3000:3000 -v $(pwd)/output:/output ghcr.io/sv2dev/media-optimizer:
 
 ## API
 
-### POST /images/process
+### POST /audio/process
 
 #### Request
 
-```
-URL: /images/process?<Options|options=OptionsJSON[]>
-Method: POST
-Headers:
-- [X-Options: <OptionsJSON[]>]
-Body: Binary file
+```http
+POST /audio/process?<Options|options=OptionsJSON[]>
+
+X-Options: <OptionsJSON[]>
+
+Binary file content
 ```
 
 #### Response
 
-```
+```http
 Status: 200 OK
-Headers:
-- Content-Type: multipart/mixed; boundary=<boundary>
-Body: multipart/mixed body with status updates and the processed files (if no output option was provided)
+
+Content-Type: multipart/mixed; boundary=<boundary>
+
+multipart/mixed body with status updates and the processed files (if no output option was provided)
+```
+
+### POST /images/process
+
+#### Request
+
+```http
+POST /images/process?<Options|options=OptionsJSON[]>
+
+X-Options: <OptionsJSON[]>
+
+Binary file content
+```
+
+#### Response
+
+```http
+Status: 200 OK
+
+Content-Type: multipart/mixed; boundary=<boundary>
+
+multipart/mixed body with status updates and the processed files (if no output option was provided)
 ```
 
 ### POST /videos/process
 
 #### Request
 
-```
-URL: /videos/process?<Options|options=OptionsJSON[]>
-Method: POST
-Headers:
-- [X-Options: <OptionsJSON[]>]
-Body: Binary file
+```http
+POST /videos/process?<Options|options=OptionsJSON[]>
+
+X-Options: <OptionsJSON[]>
+
+Binary file content
 ```
 
 #### Response
 
-```
+```http
 Status: 200 OK
-Headers:
-- Content-Type: multipart/mixed; boundary=<boundary>
-Body: multipart/mixed body with status updates and the processed files (if no output option was provided)
+
+Content-Type: multipart/mixed; boundary=<boundary>
+
+multipart/mixed body with status updates and the processed files (if no output option was provided)
 ```
 
 ### Options
@@ -63,7 +87,7 @@ Each provided option object will result in a processed output file, which allows
 
 Using curl with headers, redirecting output to a file (within the container):
 
-```
+```bash
 curl -X POST http://localhost:3000/videos/process \
   -H 'X-Options: {"format": "mp4", "videoCodec": "libsvtav1", "output": "/output/output.mp4"}' \
   --data-binary @/path/to/input.mov

@@ -1,5 +1,6 @@
 import {
   ProcessedFile,
+  type AudioOptions,
   type ImageOptions,
   type ProcessingError,
   type Progress,
@@ -12,6 +13,25 @@ let f = fetch;
 
 export function setFetch(ftch: typeof fetch) {
   f = ftch;
+}
+
+/**
+ * Process an audio file.
+ * @param host - The host of the server.
+ * @param input - The input audio file. Can be a stream or a blob.
+ * @param opts - The options for the audio processing.
+ * @returns An iterable of the processed audio files.
+ */
+export async function* processAudio(
+  host: string,
+  input: AsyncIterable<Uint8Array> | Blob,
+  opts: AudioOptions | AudioOptions[]
+) {
+  yield* optimizeFetch<Progress | QueuePosition | ProcessingError>(
+    `${host}/audio/process`,
+    input,
+    opts
+  );
 }
 
 /**

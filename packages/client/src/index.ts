@@ -1,2 +1,2 @@
 export { ProcessedFile } from "@m4k/common";
-export { processImage, processVideo, setFetch } from "./client";
+export { processAudio, processImage, processVideo, setFetch } from "./client";
