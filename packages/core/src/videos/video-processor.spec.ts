@@ -4,13 +4,10 @@ import {
   type Progress,
   type QueuePosition,
 } from "@m4k/common";
-import { afterAll, describe, expect, it } from "bun:test";
-import { rm } from "node:fs/promises";
+import { describe, expect, it } from "bun:test";
 import { processVideo, videoQueue } from "./video-processor";
 
 const fixture = Bun.file(`../../fixtures/video.mp4`);
-
-afterAll(async () => rm("/tmp/m4k", { force: true, recursive: true }));
 
 describe("processVideo()", () => {
   it("should process a video", async () => {

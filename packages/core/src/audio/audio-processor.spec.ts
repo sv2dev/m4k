@@ -4,13 +4,10 @@ import {
   type Progress,
   type QueuePosition,
 } from "@m4k/common";
-import { afterAll, describe, expect, it } from "bun:test";
-import { rm } from "node:fs/promises";
+import { describe, expect, it } from "bun:test";
 import { audioQueue, processAudio } from "./audio-processor";
 
 const fixture = Bun.file(`../../fixtures/audio.mp3`);
-
-afterAll(async () => rm("/tmp/m4k", { force: true, recursive: true }));
 
 describe("processAudio()", () => {
   it("should process an audio file", async () => {
