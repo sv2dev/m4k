@@ -1,4 +1,5 @@
 import type { ServeOptions, Server } from "bun";
+import { processAudioHandler } from "./audio/process-audio-handler";
 import { processImageHandler } from "./images/process-image-handler";
 import { processVideoHandler } from "./videos/process-video-handler";
 
@@ -23,6 +24,7 @@ export const serveOpts: ServeOptions = {
 
 const routes = {
   POST: {
+    "/audio/process": processAudioHandler,
     "/images/process": processImageHandler,
     "/videos/process": processVideoHandler,
   },

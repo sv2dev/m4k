@@ -1,19 +1,46 @@
-import { ConvertedFile } from "@m4k/common";
+import { ProcessedFile } from "@m4k/common";
 import serveOpts from "@m4k/server";
 import { describe, expect, it } from "bun:test";
-import { optimizeImage, setFetch } from "./client";
-setFetch(async (x) => serveOpts.fetch.call(serveOpts as any, new Request(x), null as any));
+import { processAudio, processImage, processVideo, setFetch } from "./client";
 
-describe("optimizeImage()", () => {
+setFetch(async (x) =>
+  serveOpts.fetch.call(serveOpts as any, new Request(x), null as any)
+);
+
+describe("processAudio()", () => {
+  it("should query the server to process an audio file", async () => {
+    const audio = Bun.file("../../fixtures/audio.mp3");
+    const files: { name: string; type: string; size: number }[] = [];
+
+    for await (const x of processAudio("http://localhost:3000", audio, [
+      { format: "mp3", name: "audio.mp3" },
+    ])) {
+      if (x instanceof ProcessedFile) {
+        const chunks = await Array.fromAsync(x.stream);
+        files.push({
+          name: x.name,
+          type: x.type,
+          size: chunks.reduce((sum, chunk) => sum + chunk.length, 0),
+        });
+      }
+    }
+
+    expect(files).toEqual([
+      { name: "audio.mp3", type: "audio/mpeg", size: 52288 },
+    ]);
+  });
+});
+
+describe("processImage()", () => {
   it("should query the server to process an image", async () => {
     const img = Bun.file("../../fixtures/image.jpeg");
-    const files: ({ name: string, type: string, size: number })[] = [];
+    const files: { name: string; type: string; size: number }[] = [];
 
-    for await (const x of optimizeImage("http://localhost:3000", img, [
+    for await (const x of processImage("http://localhost:3000", img, [
       { format: "webp", name: "image.webp" },
       { format: "avif", name: "image.avif" },
     ])) {
-      if (x instanceof ConvertedFile) {
+      if (x instanceof ProcessedFile) {
         const chunks = await Array.fromAsync(x.stream);
         files.push({
           name: x.name,
@@ -26,6 +53,30 @@ describe("optimizeImage()", () => {
     expect(files).toEqual([
       { name: "image.webp", type: "image/webp", size: 2124 },
       { name: "image.avif", type: "image/avif", size: 1179 },
+    ]);
+  });
+});
+
+describe("processVideo()", () => {
+  it("should query the server to process a video", async () => {
+    const video = Bun.file("../../fixtures/video.mp4");
+    const files: { name: string; type: string; size: number }[] = [];
+
+    for await (const x of processVideo("http://localhost:3000", video, [
+      { format: "mp4", name: "video.mp4" },
+    ])) {
+      if (x instanceof ProcessedFile) {
+        const chunks = await Array.fromAsync(x.stream);
+        files.push({
+          name: x.name,
+          type: x.type,
+          size: chunks.reduce((sum, chunk) => sum + chunk.length, 0),
+        });
+      }
+    }
+
+    expect(files).toEqual([
+      { name: "video.mp4", type: "video/mp4", size: expect.any(Number) },
     ]);
   });
 });

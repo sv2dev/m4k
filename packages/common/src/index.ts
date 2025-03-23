@@ -10,7 +10,7 @@ export type ProcessingError = {
   error: string;
 };
 
-export type ImageOptimizerOptions = {
+export type ImageOptions = {
   /** The rotation of the image. If not provided, the image will be auto-rotated, according to the EXIF data. To disable auto-rotation, set to `0`. */
   rotate?: number;
   /** Resizing options. */
@@ -24,19 +24,19 @@ export type ImageOptimizerOptions = {
   };
   /** The format of the output file. */
   format?:
-  | "avif"
-  | "jpeg"
-  | "png"
-  | "webp"
-  | "tiff"
-  | "dz"
-  | "ppm"
-  | "fits"
-  | "gif"
-  | "svg"
-  | "heif"
-  | "pdf"
-  | "jp2";
+    | "avif"
+    | "jpeg"
+    | "png"
+    | "webp"
+    | "tiff"
+    | "dz"
+    | "ppm"
+    | "fits"
+    | "gif"
+    | "svg"
+    | "heif"
+    | "pdf"
+    | "jp2";
   /** The quality of the output file. */
   quality?: number;
   /** Whether to keep the metadata of the image. */
@@ -64,7 +64,7 @@ export type ImageOptimizerOptions = {
   output?: string;
 };
 
-export type VideoOptimizerOptions = {
+export type VideoOptions = {
   /** The aspect ratio of the output file. */
   aspect?: number | string;
   /** The bitrate of the audio. */
@@ -101,10 +101,33 @@ export type VideoOptimizerOptions = {
   output?: string;
 };
 
-export class ConvertedFile {
+export type AudioOptions = {
+  /** The bitrate of the audio. */
+  bitrate?: number | string;
+  /** The codec of the audio. */
+  codec?: string;
+  /** The complex filters to apply to the audio. */
+  complexFilters?: string;
+  /** The filters to apply to the audio. */
+  filters?: string;
+  /** The duration of the output file. */
+  duration?: number | string;
+  /** The format of the output file. */
+  format?: string;
+  /** The input format of the audio. */
+  inputFormat?: string;
+  /** The seek time of the audio. */
+  seek?: number | string;
+  /** The name of the output file. */
+  name?: string;
+  /** The output path of the file. */
+  output?: string;
+};
+
+export class ProcessedFile {
   constructor(
     readonly name: string,
     readonly type: string,
     readonly stream?: AsyncIterable<Uint8Array>
-  ) { }
+  ) {}
 }

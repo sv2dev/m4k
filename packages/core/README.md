@@ -3,27 +3,41 @@
 A media conversion toolkit based on [ffmpeg](https://ffmpeg.org/) and [sharp](https://sharp.pixelplumbing.com/)/[libvips](https://github.com/libvips/libvips).
 It provides queueing and progress reporting via async iterables.
 
+The API is unified for audio, images and videos.
+
 ## Usage
 
-Image optimization happens completely in memory.
+### Processing audio
 
 ```ts
-import { optimizeImage, ConvertedFile } from "m4k";
-// input is a ReadableStream or Blob
-for await (const value of optimizeImage(input, opts)) {
-  if (value instanceof ConvertedFile) {
+import { processAudio, ProcessedFile } from "m4k";
+// input is a file path or an async iterable of Uint8Arrays or a Blob
+for await (const value of processAudio(input, opts)) {
+  if (value instanceof ProcessedFile) {
     // do something with the file
   }
 }
 ```
 
-For lower memory usage, video optimization happens with files.
+### Processing images
 
 ```ts
-import { optimizeVideo, ConvertedFile } from "m4k";
-// input is a file path
-for await (const value of optimizeVideo(input, opts)) {
-  if (value instanceof ConvertedFile) {
+import { processImage, ProcessedFile } from "m4k";
+// input is a file path or an async iterable of Uint8Arrays or a Blob
+for await (const value of processImage(input, opts)) {
+  if (value instanceof ProcessedFile) {
+    // do something with the file
+  }
+}
+```
+
+### Processing videos
+
+```ts
+import { processVideo, ProcessedFile } from "m4k";
+// input is a file path or an async iterable of Uint8Arrays or a Blob
+for await (const value of processVideo(input, opts)) {
+  if (value instanceof ProcessedFile) {
     // do something with the file
   }
 }

@@ -176,3 +176,4 @@ dist
 
 .tmp
 packages/*/lib
+packages/*/output

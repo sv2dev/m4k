@@ -1,44 +1,38 @@
-import { ConvertedFile, type VideoOptimizerOptions } from "@m4k/common";
+import { ProcessedFile } from "@m4k/common";
 import { spawn } from "node:child_process";
 import { getRandomValues } from "node:crypto";
-import { mkdir, rm } from "node:fs/promises";
-import { createQueue } from "tasque";
+import { createWriteStream } from "node:fs";
+import { rm } from "node:fs/promises";
+import { type Tasque } from "tasque";
 import { mimeTypes } from "../util/mime";
+import { exhaustAsyncIterableToWritable } from "../util/streams";
 
-export function optimizeVideo(
-  inputPath: string,
-  opts: VideoOptimizerOptions,
-  signal?: AbortSignal
+/**
+ * Process a video.
+ * @param input - The input video. Can be a file path, a stream or a blob.
+ * @param opts - The options for the video processing.
+ * @param signal - An optional abort signal.
+ * @returns An iterable of the processed videos.
+ */
+export function processFfmpeg(
+  input: string | AsyncIterable<Uint8Array> | Blob,
+  buildArgs: () => { input: string[]; out: string[]; format: string },
+  {
+    signal,
+    queue,
+    tmpDir,
+  }: { signal?: AbortSignal; queue: Tasque; tmpDir: string }
 ) {
-  const iterable = videoQueue.iterate(async function* () {
-    await mkdir(tmpVideoDir, { recursive: true });
-    const outputPath = `${tmpVideoDir}/out-${Buffer.from(
-      getRandomValues(new Uint8Array(16))
-    ).toString("base64url")}.${getExtension(opts.format ?? "mp4")}`;
-
-    const inArgs = [] as string[];
-    if (opts.inputFormat) inArgs.push("-f", opts.inputFormat);
-    if (opts.seek) inArgs.push("-ss", opts.seek.toString());
-    if (opts.duration) inArgs.push("-t", opts.duration.toString());
-    const outArgs = [] as string[];
-    if (opts.format) outArgs.push("-f", opts.format);
-    if (opts.audioBitrate) outArgs.push("-b:a", opts.audioBitrate.toString());
-    if (opts.videoBitrate) outArgs.push("-b:v", opts.videoBitrate.toString());
-    if (opts.audioFilters) outArgs.push("-af", opts.audioFilters);
-    if (opts.videoFilters) outArgs.push("-vf", opts.videoFilters);
-    if (opts.complexFilters)
-      outArgs.push("-filter_complex", opts.complexFilters);
-    if (opts.aspect) outArgs.push("-aspect", opts.aspect.toString());
-    if (opts.pad) outArgs.push("-pad", opts.pad);
-    if (opts.fps) outArgs.push("-r", opts.fps.toString());
-    if (opts.size) outArgs.push("-scale", opts.size);
-    outArgs.push("-c:v", opts.videoCodec ?? "copy");
-    outArgs.push("-c:a", opts.audioCodec ?? "copy");
-
+  const id = randomId();
+  const inputPath =
+    typeof input === "string" ? input : createTmp(tmpDir, id, input);
+  const iterable = queue.iterate(async function* () {
+    const { input: inArgs, out: outArgs, format } = buildArgs();
+    const outputPath = `${tmpDir}/out-${id}.${getExtension(format)}`;
     try {
       const child = spawn(
         ffmpeg,
-        ["-y", ...inArgs, "-i", inputPath, ...outArgs, outputPath],
+        ["-y", ...inArgs, "-i", await inputPath, ...outArgs, outputPath],
         { stdio: ["pipe", "pipe", "pipe"], signal }
       );
       const decoder = new TextDecoder();
@@ -80,9 +74,12 @@ export function optimizeVideo(
       if (code !== 0) {
         throw new Error(`ffmpeg exited with code ${code}: ${errStr}`);
       }
-      yield new ConvertedFile(outputPath, mimeTypes[opts.format ?? "mp4"]);
+      yield new ProcessedFile(outputPath, mimeTypes[format]);
     } finally {
       await rm(outputPath, { force: true });
+      if (typeof inputPath !== "string") {
+        await rm(await inputPath, { force: true });
+      }
     }
   }, signal);
   if (!iterable) return null;
@@ -104,12 +101,23 @@ export function getExtension(format: string) {
   return extMap[format] ?? format;
 }
 
-export const videoQueue = createQueue({
-  parallelize: Number(process.env.VIDEO_PARALLELIZE ?? 1),
-  max: Number(process.env.VIDEO_QUEUE_SIZE ?? 5),
-});
+async function createTmp(
+  tmpDir: string,
+  id: string,
+  input: AsyncIterable<Uint8Array<ArrayBufferLike>> | Blob
+) {
+  const filePath = `${tmpDir}/in-${id}`;
+  const writer = createWriteStream(filePath);
+  await exhaustAsyncIterableToWritable(
+    "stream" in input ? input.stream() : input,
+    writer
+  );
+  return filePath;
+}
 
-export const tmpVideoDir = `${process.env.TMP_DIR ?? "/tmp"}/videos`;
+function randomId() {
+  return Buffer.from(getRandomValues(new Uint8Array(16))).toString("base64url");
+}
 
 function parseDuration(metadataStr: string) {
   const match = metadataStr.match(/Duration: (\d+:\d+:\d+\.\d+)/);

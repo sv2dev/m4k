@@ -1,7 +1,7 @@
-import type { ImageOptimizerOptions } from "@m4k/common";
+import type { ImageOptions } from "@m4k/common";
 import { Type as T, type StaticDecode } from "@sinclair/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
-import { ConvertedFile, optimizeImage } from "m4k";
+import { ProcessedFile, processImage } from "m4k";
 import { rm } from "node:fs/promises";
 import { parseOpts } from "../util/request-parsing";
 import { error, queueAndStream } from "../util/response";
@@ -77,22 +77,24 @@ const querySchema = T.Object({
 const compiledOptionsSchema = TypeCompiler.Compile(optionsSchema);
 
 export async function processImageHandler(request: Request) {
-  let optsArr: ImageOptimizerOptions[];
+  if (!request.body) return error(400, "No body provided");
+  let optsArr: ImageOptions[];
   try {
     optsArr = parseOpts(request, compiledOptionsSchema, queryToOptions);
   } catch (err) {
     return error(400, (err as RangeError).message);
   }
   if (optsArr.length === 0) return error(400, "No options provided");
-  if (!request.body) return error(400, "No body provided");
 
-  const iterable = optimizeImage(request.body, optsArr, request.signal);
+  const iterable = processImage(request.body, optsArr, {
+    signal: request.signal,
+  });
   if (!iterable) return error(409, "Queue is full");
   return queueAndStream(
     (async function* () {
       let idx = 0;
       for await (const value of iterable) {
-        if (value instanceof ConvertedFile) {
+        if (value instanceof ProcessedFile) {
           const { output, name } = optsArr[idx];
           if (output) {
             const out = Bun.file(output);
@@ -104,7 +106,7 @@ export async function processImageHandler(request: Request) {
             await writer.end();
             await rm(value.name, { force: true });
           } else if (name) {
-            yield new ConvertedFile(name, value.type, value.stream);
+            yield new ProcessedFile(name, value.type, value.stream);
           } else {
             yield value;
           }
@@ -126,7 +128,7 @@ function queryToOptions({
   cropWidth,
   cropHeight,
   ...query
-}: StaticDecode<typeof querySchema>): ImageOptimizerOptions {
+}: StaticDecode<typeof querySchema>): ImageOptions {
   return {
     ...query,
     ...((width || height) && {
@@ -138,12 +140,12 @@ function queryToOptions({
     }),
     ...(cropWidth &&
       cropHeight && {
-      crop: {
-        left: cropLeft,
-        top: cropTop,
-        width: cropWidth,
-        height: cropHeight,
-      },
-    }),
+        crop: {
+          left: cropLeft,
+          top: cropTop,
+          width: cropWidth,
+          height: cropHeight,
+        },
+      }),
   };
 }

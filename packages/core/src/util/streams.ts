@@ -1,11 +1,13 @@
-import { Readable } from "node:stream";
+import type { Writable } from "stream";
 
-export function readableFromWeb(stream: ReadableStream) {
-  // Currently node types don't match with TS lib types for ReadableStream, so we need to cast to any.
-  return Readable.fromWeb(stream as any);
-}
-
-export function readableToWeb(stream: Readable) {
-  return Readable.toWeb(stream) as unknown as ReadableStream &
-    AsyncIterable<Uint8Array>;
+export async function exhaustAsyncIterableToWritable(
+  it: AsyncIterable<Uint8Array>,
+  writable: Writable
+) {
+  for await (const chunk of it) {
+    if (!writable.write(chunk))
+      await new Promise((resolve) => writable.once("drain", resolve));
+  }
+  writable.end();
+  await new Promise((resolve) => writable.on("finish", resolve));
 }
