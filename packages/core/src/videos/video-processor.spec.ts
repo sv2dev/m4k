@@ -61,6 +61,21 @@ describe("processVideo()", () => {
     expect(videoQueue.running).toBe(0);
     expect(videoQueue.queued).toBe(0);
   });
+
+  it("should handle abort signals", async () => {
+    const iterable = processVideo(
+      fixture.name!,
+      { format: "mp4" },
+      { signal: AbortSignal.timeout(0) }
+    )!;
+
+    try {
+      await collect(iterable);
+      throw new Error("Should not reach here");
+    } catch (e) {
+      expect((e as Error).name).toBe("TimeoutError");
+    }
+  });
 });
 
 async function collect(

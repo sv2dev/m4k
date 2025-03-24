@@ -30,11 +30,17 @@ export function processFfmpeg(
     const { input: inArgs, out: outArgs, format } = buildArgs();
     const outputPath = `${tmpDir}/out-${id}.${getExtension(format)}`;
     try {
+      signal?.throwIfAborted();
+      const p = await inputPath;
+      signal?.throwIfAborted();
+
       const child = spawn(
         ffmpeg,
-        ["-y", ...inArgs, "-i", await inputPath, ...outArgs, outputPath],
-        { stdio: ["pipe", "pipe", "pipe"], signal }
+        ["-y", ...inArgs, "-i", p, ...outArgs, outputPath],
+        { stdio: ["pipe", "pipe", "pipe"] }
       );
+      // Use manual abort handling to avoid some uncatchable error, at least in bun.
+      signal?.addEventListener("abort", () => child.kill());
       const decoder = new TextDecoder();
 
       let metadataStr = "";
@@ -75,13 +81,16 @@ export function processFfmpeg(
         throw new Error(`ffmpeg exited with code ${code}: ${errStr}`);
       }
       yield new ProcessedFile(outputPath, mimeTypes[format]);
+    } catch (e) {
+      signal?.throwIfAborted();
+      throw e;
     } finally {
       await rm(outputPath, { force: true });
       if (typeof inputPath !== "string") {
         await rm(await inputPath, { force: true });
       }
     }
-  }, signal);
+  });
   if (!iterable) return null;
   return (async function* () {
     for await (const [position, value] of iterable) {
