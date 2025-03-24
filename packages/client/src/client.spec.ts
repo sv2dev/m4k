@@ -79,4 +79,42 @@ describe("processVideo()", () => {
       { name: "video.mp4", type: "video/mp4", size: expect.any(Number) },
     ]);
   });
+
+  it("should immediately throw an error if the signal is already aborted", async () => {
+    const video = Bun.file("../../fixtures/video.mp4");
+    try {
+      await Array.fromAsync(
+        processVideo(
+          "http://localhost:3000",
+          video,
+          [{ format: "mp4", name: "video.mp4" }],
+          { signal: AbortSignal.abort() }
+        )
+      );
+      throw new Error("should not get here");
+    } catch (e) {
+      expect(e).toBeInstanceOf(Error);
+      expect((e as Error).name).toBe("AbortError");
+    }
+  });
+
+  it("should abort the request via the signal", async () => {
+    const video = Bun.file("../../fixtures/video.mp4");
+    try {
+      for await (const x of processVideo(
+        "http://localhost:3000",
+        video,
+        [{ format: "mp4", name: "video.mp4" }],
+        { signal: AbortSignal.timeout(0) }
+      )) {
+      }
+      throw new Error("should not get here");
+    } catch (e) {
+      expect(e).toBeInstanceOf(Error);
+      expect((e as Error).name).toBe("TimeoutError");
+    }
+
+    // Wait a bit to let any unhandled rejections be reported
+    await Bun.sleep(100);
+  });
 });

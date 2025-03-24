@@ -20,18 +20,16 @@ export function setFetch(ftch: typeof fetch) {
  * @param host - The host of the server.
  * @param input - The input audio file. Can be a stream or a blob.
  * @param opts - The options for the audio processing.
+ * @param opts.signal - An optional abort signal.
  * @returns An iterable of the processed audio files.
  */
 export async function* processAudio(
   host: string,
   input: AsyncIterable<Uint8Array> | Blob,
-  opts: AudioOptions | AudioOptions[]
+  opts: AudioOptions | AudioOptions[],
+  { signal }: { signal?: AbortSignal } = {}
 ) {
-  yield* optimizeFetch<Progress | QueuePosition | ProcessingError>(
-    `${host}/audio/process`,
-    input,
-    opts
-  );
+  yield* runFetch(`${host}/audio/process`, input, opts, { signal });
 }
 
 /**
@@ -39,18 +37,16 @@ export async function* processAudio(
  * @param host - The host of the server.
  * @param input - The input image. Can be a stream or a blob.
  * @param opts - The options for the image processing.
+ * @param opts.signal - An optional abort signal.
  * @returns An iterable of the processed images.
  */
 export async function* processImage(
   host: string,
   input: AsyncIterable<Uint8Array> | Blob,
-  opts: ImageOptions | ImageOptions[]
+  opts: ImageOptions | ImageOptions[],
+  { signal }: { signal?: AbortSignal } = {}
 ) {
-  yield* optimizeFetch<Progress | QueuePosition | ProcessingError>(
-    `${host}/images/process`,
-    input,
-    opts
-  );
+  yield* runFetch(`${host}/images/process`, input, opts, { signal });
 }
 
 /**
@@ -58,30 +54,31 @@ export async function* processImage(
  * @param host - The host of the server.
  * @param input - The input video. Can be a stream or a blob.
  * @param opts - The options for the video processing.
+ * @param opts.signal - An optional abort signal.
  * @returns An iterable of the processed videos.
  */
 export async function* processVideo(
   host: string,
   input: AsyncIterable<Uint8Array> | Blob,
-  opts: VideoOptions | VideoOptions[]
+  opts: VideoOptions | VideoOptions[],
+  { signal }: { signal?: AbortSignal } = {}
 ) {
-  yield* optimizeFetch<Progress | QueuePosition | ProcessingError>(
-    `${host}/videos/process`,
-    input,
-    opts
-  );
+  yield* runFetch(`${host}/videos/process`, input, opts, { signal });
 }
 
-async function* optimizeFetch<T>(
+async function* runFetch(
   url: string,
   input: AsyncIterable<Uint8Array> | Blob,
-  opts: any
+  opts: any,
+  { signal }: { signal?: AbortSignal } = {}
 ) {
+  signal?.throwIfAborted();
   const res = await f(
     new Request(url, {
       method: "POST",
       body: inputToStream(input),
       headers: { "X-Options": JSON.stringify(opts) },
+      signal,
     })
   );
   if (!res.ok) {
@@ -91,7 +88,15 @@ async function* optimizeFetch<T>(
   }
   for await (const part of streamParts(res)) {
     if (part.type === "application/json") {
-      yield (await part.json()) as T;
+      const msg = (await part.json()) as
+        | Progress
+        | QueuePosition
+        | ProcessingError;
+      if ("error" in msg) {
+        signal?.throwIfAborted();
+        throw new Error(msg.error);
+      }
+      yield msg;
     } else if (part.type !== "text/plain") {
       yield new ProcessedFile(
         part.filename!,
