@@ -7,7 +7,7 @@ The docker image is available at [ghcr.io/sv2dev/media-optimizer](https://github
 ## Usage
 
 ```bash
-docker run -p 3000:3000 -v $(pwd)/output:/output ghcr.io/sv2dev/media-optimizer:0.0.3
+docker run -p 3000:3000 -v $(pwd)/output:/output ghcr.io/sv2dev/m4k:0.2.1
 ```
 
 ## API
@@ -18,7 +18,6 @@ docker run -p 3000:3000 -v $(pwd)/output:/output ghcr.io/sv2dev/media-optimizer:
 
 ```http
 POST /audio/process?<Options|options=OptionsJSON[]>
-
 X-Options: <OptionsJSON[]>
 
 Binary file content
@@ -28,7 +27,6 @@ Binary file content
 
 ```http
 Status: 200 OK
-
 Content-Type: multipart/mixed; boundary=<boundary>
 
 multipart/mixed body with status updates and the processed files (if no output option was provided)
@@ -40,7 +38,6 @@ multipart/mixed body with status updates and the processed files (if no output o
 
 ```http
 POST /images/process?<Options|options=OptionsJSON[]>
-
 X-Options: <OptionsJSON[]>
 
 Binary file content
@@ -50,7 +47,6 @@ Binary file content
 
 ```http
 Status: 200 OK
-
 Content-Type: multipart/mixed; boundary=<boundary>
 
 multipart/mixed body with status updates and the processed files (if no output option was provided)
@@ -62,7 +58,6 @@ multipart/mixed body with status updates and the processed files (if no output o
 
 ```http
 POST /videos/process?<Options|options=OptionsJSON[]>
-
 X-Options: <OptionsJSON[]>
 
 Binary file content
@@ -72,7 +67,6 @@ Binary file content
 
 ```http
 Status: 200 OK
-
 Content-Type: multipart/mixed; boundary=<boundary>
 
 multipart/mixed body with status updates and the processed files (if no output option was provided)

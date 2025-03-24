@@ -11,7 +11,7 @@ The docker image is available at [ghcr.io/sv2dev/media-optimizer](https://github
 The [`@m4k/server`](./packages/server) can be deployed as a docker container.
 
 ```bash
-docker run -p 3000:3000 -v $(pwd)/output:/output ghcr.io/sv2dev/m4k:0.2.0
+docker run -p 3000:3000 -v $(pwd)/output:/output ghcr.io/sv2dev/m4k:0.2.1
 ```
 
 Alternatively, you can install the server as a local package and run it:
