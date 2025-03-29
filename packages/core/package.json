@@ -1,6 +1,6 @@
 {
   "name": "m4k",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "type": "module",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -18,7 +18,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@m4k/common": "workspace:^"
+    "@m4k/common": "workspace:^0.2.0"
   },
   "peerDependencies": {
     "sharp": "^0.33.5"
