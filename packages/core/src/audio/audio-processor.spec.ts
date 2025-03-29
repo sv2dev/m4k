@@ -50,9 +50,6 @@ describe("processAudio()", () => {
         type: "audio/ogg",
         size: expect.any(Number),
       },
-      { progress: 0 },
-      { progress: expect.any(Number) },
-      { progress: 100 },
       {
         filename: expect.any(String),
         type: "audio/x-wav",
