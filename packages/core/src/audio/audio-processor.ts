@@ -1,7 +1,7 @@
 import { type AudioOptions } from "@m4k/common";
 import { mkdir } from "node:fs/promises";
 import { createQueue } from "tasque";
-import { processFfmpeg } from "../util/ffmpeg-processor";
+import { getExtension, processFfmpeg } from "../util/ffmpeg-processor";
 
 /**
  * Process a video.
@@ -12,28 +12,31 @@ import { processFfmpeg } from "../util/ffmpeg-processor";
  */
 export function processAudio(
   input: string | AsyncIterable<Uint8Array> | Blob,
-  opts: AudioOptions,
+  opts: AudioOptions | AudioOptions[],
   { signal }: { signal?: AbortSignal } = {}
 ) {
   return processFfmpeg(
     input,
     () => {
-      const inArgs = [] as string[];
-      if (opts.inputFormat) inArgs.push("-f", opts.inputFormat);
-      if (opts.seek) inArgs.push("-ss", opts.seek.toString());
-      if (opts.duration) inArgs.push("-t", opts.duration.toString());
-      const outArgs = [] as string[];
-      if (opts.format) outArgs.push("-f", opts.format);
-      if (opts.bitrate) outArgs.push("-b:a", opts.bitrate.toString());
-      if (opts.filters) outArgs.push("-af", opts.filters);
-      if (opts.complexFilters)
-        outArgs.push("-filter_complex", opts.complexFilters);
-      outArgs.push("-c:a", opts.codec ?? "copy");
-      return {
-        input: inArgs,
-        out: outArgs,
-        format: opts.format ?? "mp4",
-      };
+      let args = [] as { input: string[]; out: string[]; ext: string }[];
+      for (const o of Array.isArray(opts) ? opts : [opts]) {
+        const inArgs = [] as string[];
+        if (o.inputFormat) inArgs.push("-f", o.inputFormat);
+        const outArgs = [] as string[];
+        if (o.format) outArgs.push("-f", o.format);
+        if (o.seek) outArgs.push("-ss", o.seek.toString());
+        if (o.duration) outArgs.push("-t", o.duration.toString());
+        if (o.bitrate) outArgs.push("-b:a", o.bitrate.toString());
+        if (o.filters) outArgs.push("-af", o.filters);
+        if (o.complexFilters) outArgs.push("-filter_complex", o.complexFilters);
+        if (o.codec) outArgs.push("-c:a", o.codec);
+        args.push({
+          input: inArgs,
+          out: outArgs,
+          ext: o.ext ?? getExtension(o.format ?? "mp3"),
+        });
+      }
+      return args;
     },
     { signal, queue: audioQueue, tmpDir }
   );

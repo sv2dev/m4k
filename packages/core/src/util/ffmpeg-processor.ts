@@ -16,7 +16,7 @@ import { exhaustAsyncIterableToWritable } from "../util/streams";
  */
 export function processFfmpeg(
   input: string | AsyncIterable<Uint8Array> | Blob,
-  buildArgs: () => { input: string[]; out: string[]; format: string },
+  buildArgs: () => { input: string[]; out: string[]; ext: string }[],
   {
     signal,
     queue,
@@ -27,67 +27,70 @@ export function processFfmpeg(
   const inputPath =
     typeof input === "string" ? input : createTmp(tmpDir, id, input);
   const iterable = queue.iterate(async function* () {
-    const { input: inArgs, out: outArgs, format } = buildArgs();
-    const outputPath = `${tmpDir}/out-${id}.${getExtension(format)}`;
-    try {
-      signal?.throwIfAborted();
-      const p = await inputPath;
-      signal?.throwIfAborted();
+    let i = 1;
+    for (const { input: inArgs, out: outArgs, ext } of buildArgs()) {
+      const outputPath = `${tmpDir}/out-${id}-${i++}.${ext}`;
+      try {
+        signal?.throwIfAborted();
+        const p = await inputPath;
+        signal?.throwIfAborted();
 
-      const child = spawn(
-        ffmpeg,
-        ["-y", ...inArgs, "-i", p, ...outArgs, outputPath],
-        { stdio: ["pipe", "pipe", "pipe"] }
-      );
-      // Use manual abort handling to avoid some uncatchable error, at least in bun.
-      signal?.addEventListener("abort", () => child.kill());
-      const decoder = new TextDecoder();
+        const child = spawn(
+          ffmpeg,
+          ["-y", ...inArgs, "-i", p, ...outArgs, outputPath],
+          { stdio: ["pipe", "pipe", "pipe"] }
+        );
+        // Use manual abort handling to avoid some uncatchable error, at least in bun.
+        signal?.addEventListener("abort", () => child.kill());
+        const decoder = new TextDecoder();
 
-      let metadataStr = "";
-      let duration: number | null = null;
-      let progress = 0;
-      let errStr = "";
-      for await (const chunk of child.stderr as any as AsyncIterable<Uint8Array>) {
-        const str = decoder.decode(chunk);
-        errStr += str;
-        if (duration === null) {
-          metadataStr += str;
-          duration = parseDuration(metadataStr);
+        let metadataStr = "";
+        let duration: number | null = null;
+        let progress = 0;
+        let errStr = "";
+        for await (const chunk of child.stderr as any as AsyncIterable<Uint8Array>) {
+          const str = decoder.decode(chunk);
+          errStr += str;
           if (duration === null) {
-            metadataStr = str.slice(-30);
+            metadataStr += str;
+            duration = parseDuration(metadataStr);
+            if (duration === null) {
+              metadataStr = str.slice(-30);
+              continue;
+            }
+            yield { progress };
             continue;
           }
-          yield { progress };
-          continue;
-        }
-        const match = str.match(/time=(\d\d:\d\d:\d\d.\d\d)/);
-        if (match) {
-          const time = durationToMs(match[1]);
-          const p = Math.round((time / duration) * 100);
-          if (p !== progress) {
-            progress = p;
-            yield { progress };
+          const match = str.match(/time=(\d\d:\d\d:\d\d.\d\d)/);
+          if (match) {
+            const time = durationToMs(match[1]);
+            const p = Math.round((time / duration) * 100);
+            if (p !== progress) {
+              progress = p;
+              yield { progress };
+            }
           }
         }
-      }
-      if (progress !== 100) {
-        yield { progress: 100 };
-      }
+        if (progress !== 100) {
+          yield { progress: 100 };
+        }
 
-      const code = await new Promise<number>((resolve) => {
-        child.on("close", resolve);
-      });
-      if (code !== 0) {
-        throw new Error(`ffmpeg exited with code ${code}: ${errStr}`);
-      }
-      yield new ProcessedFile(outputPath, mimeTypes[format]);
-    } catch (e) {
-      signal?.throwIfAborted();
-      throw e;
-    } finally {
-      await rm(outputPath, { force: true });
-      if (typeof inputPath !== "string") {
-        await rm(await inputPath, { force: true });
+        const code = await new Promise<number>((resolve) => {
+          child.on("close", resolve);
+        });
+        if (code !== 0) {
+          throw new Error(`ffmpeg exited with code ${code}: ${errStr}`);
+        }
+        yield new ProcessedFile(outputPath, mimeTypes[ext]);
+      } catch (e) {
+        signal?.throwIfAborted();
+        throw e;
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 1));
+        await rm(outputPath, { force: true });
+        if (typeof inputPath !== "string") {
+          await rm(await inputPath, { force: true });
+        }
       }
     }
   });

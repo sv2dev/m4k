@@ -18,7 +18,6 @@ describe("processAudio()", () => {
 
     const collected = await collect(iterable);
 
-    expect(collected.length).toBe(5);
     expect(collected).toEqual([
       { position: 0 },
       { progress: 0 },
@@ -31,6 +30,35 @@ describe("processAudio()", () => {
       },
     ]);
     expect((collected[4] as { size: number }).size).toBeGreaterThan(10000);
+  });
+
+  it("should process a file with multiple codecs", async () => {
+    const iterable = processAudio(fixture.name!, [
+      { format: "ogg", codec: "libvorbis" },
+      { format: "wav", codec: "pcm_u8" },
+    ])!;
+
+    const collected = await collect(iterable);
+
+    expect(collected).toEqual([
+      { position: 0 },
+      { progress: 0 },
+      { progress: expect.any(Number) },
+      { progress: 100 },
+      {
+        filename: expect.any(String),
+        type: "audio/ogg",
+        size: expect.any(Number),
+      },
+      { progress: 0 },
+      { progress: expect.any(Number) },
+      { progress: 100 },
+      {
+        filename: expect.any(String),
+        type: "audio/x-wav",
+        size: expect.any(Number),
+      },
+    ]);
   });
 
   it("should process multiple audio files in sequence", async () => {

@@ -9,6 +9,8 @@ describe("/process", () => {
   it("should process a video", async () => {
     const query = new URLSearchParams({
       format: "mp4",
+      videoCodec: "copy",
+      audioCodec: "copy",
     });
     const response = await processVideoHandler(
       new Request(`http://localhost:3000/videos/process?${query}`, {
@@ -29,6 +31,8 @@ describe("/process", () => {
   it("should process multiple videos in sequence", async () => {
     const query = new URLSearchParams({
       format: "mp4",
+      videoCodec: "copy",
+      audioCodec: "copy",
     });
     const res1 = await processVideoHandler(
       new Request(`http://localhost:3000/videos/process?${query}`, {
@@ -60,6 +64,8 @@ describe("/process", () => {
   it("should stream the queue position", async () => {
     const query = new URLSearchParams({
       format: "mp4",
+      videoCodec: "copy",
+      audioCodec: "copy",
     });
     const res1 = processVideoHandler(
       new Request(`http://localhost:3000/videos/process?${query}`, {
@@ -88,6 +94,8 @@ describe("/process", () => {
   it("should not stream back, if output is provided", async () => {
     const query = new URLSearchParams({
       format: "mp4",
+      videoCodec: "copy",
+      audioCodec: "copy",
       output: "/tmp/test-output.mp4",
     });
 

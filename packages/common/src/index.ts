@@ -77,10 +77,14 @@ export type VideoOptions = {
   complexFilters?: string;
   /** The duration of the output file. */
   duration?: number | string;
-  /** The format of the output file. */
+  /** The extension of the output file. */
+  ext?: string;
+  /** The format of the output file. If no extension is provided, it will be inferred from the format. */
   format?: string;
   /** The frames per second of the output file. */
   fps?: number;
+  /** The frames to process. */
+  frames?: number;
   /** The input format of the video. */
   inputFormat?: string;
   /** The padding of the output file. */
@@ -112,7 +116,9 @@ export type AudioOptions = {
   filters?: string;
   /** The duration of the output file. */
   duration?: number | string;
-  /** The format of the output file. */
+  /** The extension of the output file. */
+  ext?: string;
+  /** The format of the output file. If no extension is provided, it will be inferred from the format. */
   format?: string;
   /** The input format of the audio. */
   inputFormat?: string;
