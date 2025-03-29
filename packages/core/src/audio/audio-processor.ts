@@ -18,21 +18,18 @@ export function processAudio(
   return processFfmpeg(
     input,
     () => {
-      let args = [] as { input: string[]; out: string[]; ext: string }[];
+      let args = [] as { args: string[]; ext: string }[];
       for (const o of Array.isArray(opts) ? opts : [opts]) {
-        const inArgs = [] as string[];
-        if (o.inputFormat) inArgs.push("-f", o.inputFormat);
-        const outArgs = [] as string[];
-        if (o.format) outArgs.push("-f", o.format);
-        if (o.seek) outArgs.push("-ss", o.seek.toString());
-        if (o.duration) outArgs.push("-t", o.duration.toString());
-        if (o.bitrate) outArgs.push("-b:a", o.bitrate.toString());
-        if (o.filters) outArgs.push("-af", o.filters);
-        if (o.complexFilters) outArgs.push("-filter_complex", o.complexFilters);
-        if (o.codec) outArgs.push("-c:a", o.codec);
+        const a = [] as string[];
+        if (o.format) a.push("-f", o.format);
+        if (o.seek) a.push("-ss", o.seek.toString());
+        if (o.duration) a.push("-t", o.duration.toString());
+        if (o.bitrate) a.push("-b:a", o.bitrate.toString());
+        if (o.filters) a.push("-af", o.filters);
+        if (o.complexFilters) a.push("-filter_complex", o.complexFilters);
+        if (o.codec) a.push("-c:a", o.codec);
         args.push({
-          input: inArgs,
-          out: outArgs,
+          args: a,
           ext: o.ext ?? getExtension(o.format ?? "mp3"),
         });
       }

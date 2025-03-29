@@ -16,7 +16,7 @@ import { exhaustAsyncIterableToWritable } from "../util/streams";
  */
 export function processFfmpeg(
   input: string | AsyncIterable<Uint8Array> | Blob,
-  buildArgs: () => { input: string[]; out: string[]; ext: string }[],
+  buildArgs: () => { args: string[]; ext: string }[],
   {
     signal,
     queue,
@@ -28,18 +28,16 @@ export function processFfmpeg(
     typeof input === "string" ? input : createTmp(tmpDir, id, input);
   const iterable = queue.iterate(async function* () {
     let i = 1;
-    for (const { input: inArgs, out: outArgs, ext } of buildArgs()) {
+    for (const { args, ext } of buildArgs()) {
       const outputPath = `${tmpDir}/out-${id}-${i++}.${ext}`;
       try {
         signal?.throwIfAborted();
         const p = await inputPath;
         signal?.throwIfAborted();
 
-        const child = spawn(
-          ffmpeg,
-          ["-y", ...inArgs, "-i", p, ...outArgs, outputPath],
-          { stdio: ["pipe", "pipe", "pipe"] }
-        );
+        const child = spawn(ffmpeg, ["-y", "-i", p, ...args, outputPath], {
+          stdio: ["pipe", "pipe", "pipe"],
+        });
         // Use manual abort handling to avoid some uncatchable error, at least in bun.
         signal?.addEventListener("abort", () => child.kill());
         const decoder = new TextDecoder();

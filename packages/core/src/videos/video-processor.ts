@@ -17,29 +17,26 @@ export function processVideo(
   return processFfmpeg(
     input,
     () => {
-      let args = [] as { input: string[]; out: string[]; ext: string }[];
+      let args = [] as { args: string[]; ext: string }[];
       for (const o of Array.isArray(opts) ? opts : [opts]) {
-        const inArgs = [] as string[];
-        if (o.inputFormat) inArgs.push("-f", o.inputFormat);
-        if (o.seek) inArgs.push("-ss", o.seek.toString());
-        if (o.duration) inArgs.push("-t", o.duration.toString());
-        const outArgs = [] as string[];
-        if (o.frames) outArgs.push("-frames:v", o.frames.toString());
-        if (o.format) outArgs.push("-f", o.format);
-        if (o.audioBitrate) outArgs.push("-b:a", o.audioBitrate.toString());
-        if (o.videoBitrate) outArgs.push("-b:v", o.videoBitrate.toString());
-        if (o.audioFilters) outArgs.push("-af", o.audioFilters);
-        if (o.videoFilters) outArgs.push("-vf", o.videoFilters);
-        if (o.complexFilters) outArgs.push("-filter_complex", o.complexFilters);
-        if (o.aspect) outArgs.push("-aspect", o.aspect.toString());
-        if (o.pad) outArgs.push("-pad", o.pad);
-        if (o.fps) outArgs.push("-r", o.fps.toString());
-        if (o.size) outArgs.push("-scale", o.size);
-        if (o.videoCodec) outArgs.push("-c:v", o.videoCodec);
-        if (o.audioCodec) outArgs.push("-c:a", o.audioCodec);
+        const a = [] as string[];
+        if (o.frames) a.push("-frames:v", o.frames.toString());
+        if (o.format) a.push("-f", o.format);
+        if (o.seek) a.push("-ss", o.seek.toString());
+        if (o.duration) a.push("-t", o.duration.toString());
+        if (o.audioBitrate) a.push("-b:a", o.audioBitrate.toString());
+        if (o.videoBitrate) a.push("-b:v", o.videoBitrate.toString());
+        if (o.audioFilters) a.push("-af", o.audioFilters);
+        if (o.videoFilters) a.push("-vf", o.videoFilters);
+        if (o.complexFilters) a.push("-filter_complex", o.complexFilters);
+        if (o.aspect) a.push("-aspect", o.aspect.toString());
+        if (o.pad) a.push("-pad", o.pad);
+        if (o.fps) a.push("-r", o.fps.toString());
+        if (o.size) a.push("-scale", o.size);
+        if (o.videoCodec) a.push("-c:v", o.videoCodec);
+        if (o.audioCodec) a.push("-c:a", o.audioCodec);
         args.push({
-          input: inArgs,
-          out: outArgs,
+          args: a,
           ext: o.ext ?? getExtension(o.format ?? "mp4"),
         });
       }
