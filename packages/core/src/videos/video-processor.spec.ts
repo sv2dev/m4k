@@ -11,11 +11,14 @@ const fixture = Bun.file(`../../fixtures/video.mp4`);
 
 describe("processVideo()", () => {
   it("should process a video", async () => {
-    const iterable = processVideo(fixture.name!, { format: "mp4" })!;
+    const iterable = processVideo(fixture.name!, {
+      format: "mp4",
+      videoCodec: "copy",
+      audioCodec: "copy",
+    })!;
 
     const collected = await collect(iterable);
 
-    expect(collected.length).toBe(4);
     expect(collected).toEqual([
       { position: 0 },
       { progress: 0 },
@@ -30,14 +33,22 @@ describe("processVideo()", () => {
   });
 
   it("should process multiple videos in sequence", async () => {
-    const iterable1 = processVideo(fixture.name!, { format: "mp4" })!;
+    const iterable1 = processVideo(fixture.name!, {
+      format: "mp4",
+      videoCodec: "copy",
+      audioCodec: "copy",
+    })!;
 
     const collected = await collect(iterable1);
 
     expect(collected[0]).toEqual({ position: 0 });
     expect((collected.at(-1) as { size: number }).size).toBeGreaterThan(10000);
 
-    const iterable2 = processVideo(fixture.name!, { format: "mp4" })!;
+    const iterable2 = processVideo(fixture.name!, {
+      format: "mp4",
+      videoCodec: "copy",
+      audioCodec: "copy",
+    })!;
 
     const collected2 = await collect(iterable2);
 
@@ -46,8 +57,16 @@ describe("processVideo()", () => {
   });
 
   it("should enqueue processing multiple videos ", async () => {
-    const iterable1 = processVideo(fixture.name!, { format: "mp4" })!;
-    const iterable2 = processVideo(fixture.name!, { format: "mp4" })!;
+    const iterable1 = processVideo(fixture.name!, {
+      format: "mp4",
+      videoCodec: "copy",
+      audioCodec: "copy",
+    })!;
+    const iterable2 = processVideo(fixture.name!, {
+      format: "mp4",
+      videoCodec: "copy",
+      audioCodec: "copy",
+    })!;
 
     const [collected1, collected2] = await Promise.all([
       collect(iterable1),
@@ -65,7 +84,7 @@ describe("processVideo()", () => {
   it("should handle abort signals", async () => {
     const iterable = processVideo(
       fixture.name!,
-      { format: "mp4" },
+      { format: "mp4", videoCodec: "copy", audioCodec: "copy" },
       { signal: AbortSignal.timeout(0) }
     )!;
 

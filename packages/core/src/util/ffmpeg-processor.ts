@@ -16,7 +16,7 @@ import { exhaustAsyncIterableToWritable } from "../util/streams";
  */
 export function processFfmpeg(
   input: string | AsyncIterable<Uint8Array> | Blob,
-  buildArgs: () => { input: string[]; out: string[]; format: string },
+  buildArgs: () => { args: string[]; ext: string }[],
   {
     signal,
     queue,
@@ -27,18 +27,22 @@ export function processFfmpeg(
   const inputPath =
     typeof input === "string" ? input : createTmp(tmpDir, id, input);
   const iterable = queue.iterate(async function* () {
-    const { input: inArgs, out: outArgs, format } = buildArgs();
-    const outputPath = `${tmpDir}/out-${id}.${getExtension(format)}`;
+    const outputPaths = [] as string[];
     try {
       signal?.throwIfAborted();
       const p = await inputPath;
       signal?.throwIfAborted();
+      const outArgs = [] as string[];
+      let i = 1;
+      for (const { args, ext } of buildArgs()) {
+        const outputPath = `${tmpDir}/out-${id}-${i++}.${ext}`;
+        outArgs.push(...args, outputPath);
+        outputPaths.push(outputPath);
+      }
 
-      const child = spawn(
-        ffmpeg,
-        ["-y", ...inArgs, "-i", p, ...outArgs, outputPath],
-        { stdio: ["pipe", "pipe", "pipe"] }
-      );
+      const child = spawn(ffmpeg, ["-y", "-i", p, ...outArgs], {
+        stdio: ["pipe", "pipe", "pipe"],
+      });
       // Use manual abort handling to avoid some uncatchable error, at least in bun.
       signal?.addEventListener("abort", () => child.kill());
       const decoder = new TextDecoder();
@@ -80,12 +84,20 @@ export function processFfmpeg(
       if (code !== 0) {
         throw new Error(`ffmpeg exited with code ${code}: ${errStr}`);
       }
-      yield new ProcessedFile(outputPath, mimeTypes[format]);
+      for (const outputPath of outputPaths) {
+        yield new ProcessedFile(
+          outputPath,
+          mimeTypes[outputPath.split(".").pop()!]
+        );
+      }
     } catch (e) {
       signal?.throwIfAborted();
       throw e;
     } finally {
-      await rm(outputPath, { force: true });
+      await new Promise((resolve) => setTimeout(resolve, 1));
+      for (const outputPath of outputPaths) {
+        await rm(outputPath, { force: true });
+      }
       if (typeof inputPath !== "string") {
         await rm(await inputPath, { force: true });
       }

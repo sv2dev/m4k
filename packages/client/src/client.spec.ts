@@ -13,7 +13,7 @@ describe("processAudio()", () => {
     const files: { name: string; type: string; size: number }[] = [];
 
     for await (const x of processAudio("http://localhost:3000", audio, [
-      { format: "mp3", name: "audio.mp3" },
+      { format: "mp3", name: "audio.mp3", codec: "copy" },
     ])) {
       if (x instanceof ProcessedFile) {
         const chunks = await Array.fromAsync(x.stream);
@@ -63,7 +63,7 @@ describe("processVideo()", () => {
     const files: { name: string; type: string; size: number }[] = [];
 
     for await (const x of processVideo("http://localhost:3000", video, [
-      { format: "mp4", name: "video.mp4" },
+      { ext: "mp4", name: "video.mp4", videoCodec: "copy" },
     ])) {
       if (x instanceof ProcessedFile) {
         const chunks = await Array.fromAsync(x.stream);
@@ -104,7 +104,7 @@ describe("processVideo()", () => {
       for await (const x of processVideo(
         "http://localhost:3000",
         video,
-        [{ format: "mp4", name: "video.mp4" }],
+        [{ ext: "mp4", name: "video.mp4", videoCodec: "copy" }],
         { signal: AbortSignal.timeout(0) }
       )) {
       }

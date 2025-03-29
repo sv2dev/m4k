@@ -1,7 +1,7 @@
 import { streamParts } from "@sv2dev/multipart-stream";
 import { describe, expect, it } from "bun:test";
 import type {
-  ImageOptimizerOptions,
+  ImageOptions,
   ProcessingError,
   Progress,
   QueuePosition,
@@ -125,7 +125,7 @@ describe("/process", () => {
               format: "webp",
               quality: 40,
             },
-          ] satisfies ImageOptimizerOptions[]),
+          ] satisfies ImageOptions[]),
         },
       })
     );

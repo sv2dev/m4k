@@ -1,7 +1,7 @@
 import { type AudioOptions } from "@m4k/common";
 import { mkdir } from "node:fs/promises";
 import { createQueue } from "tasque";
-import { processFfmpeg } from "../util/ffmpeg-processor";
+import { getExtension, processFfmpeg } from "../util/ffmpeg-processor";
 
 /**
  * Process a video.
@@ -12,28 +12,28 @@ import { processFfmpeg } from "../util/ffmpeg-processor";
  */
 export function processAudio(
   input: string | AsyncIterable<Uint8Array> | Blob,
-  opts: AudioOptions,
+  opts: AudioOptions | AudioOptions[],
   { signal }: { signal?: AbortSignal } = {}
 ) {
   return processFfmpeg(
     input,
     () => {
-      const inArgs = [] as string[];
-      if (opts.inputFormat) inArgs.push("-f", opts.inputFormat);
-      if (opts.seek) inArgs.push("-ss", opts.seek.toString());
-      if (opts.duration) inArgs.push("-t", opts.duration.toString());
-      const outArgs = [] as string[];
-      if (opts.format) outArgs.push("-f", opts.format);
-      if (opts.bitrate) outArgs.push("-b:a", opts.bitrate.toString());
-      if (opts.filters) outArgs.push("-af", opts.filters);
-      if (opts.complexFilters)
-        outArgs.push("-filter_complex", opts.complexFilters);
-      outArgs.push("-c:a", opts.codec ?? "copy");
-      return {
-        input: inArgs,
-        out: outArgs,
-        format: opts.format ?? "mp4",
-      };
+      let args = [] as { args: string[]; ext: string }[];
+      for (const o of Array.isArray(opts) ? opts : [opts]) {
+        const a = [] as string[];
+        if (o.format) a.push("-f", o.format);
+        if (o.seek) a.push("-ss", o.seek.toString());
+        if (o.duration) a.push("-t", o.duration.toString());
+        if (o.bitrate) a.push("-b:a", o.bitrate.toString());
+        if (o.filters) a.push("-af", o.filters);
+        if (o.complexFilters) a.push("-filter_complex", o.complexFilters);
+        if (o.codec) a.push("-c:a", o.codec);
+        args.push({
+          args: a,
+          ext: o.ext ?? getExtension(o.format ?? "mp3"),
+        });
+      }
+      return args;
     },
     { signal, queue: audioQueue, tmpDir }
   );
