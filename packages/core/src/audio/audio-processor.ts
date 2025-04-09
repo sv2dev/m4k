@@ -4,11 +4,11 @@ import { createQueue } from "tasque";
 import { getExtension, processFfmpeg } from "../util/ffmpeg-processor";
 
 /**
- * Process a video.
- * @param input - The input video. Can be a file path, a stream or a blob.
- * @param opts - The options for the video processing.
+ * Process an audio file.
+ * @param input - The input audio file. Can be a file path, a stream or a blob.
+ * @param opts - The options for the audio processing.
  * @param signal - An optional abort signal.
- * @returns An iterable of the processed videos.
+ * @returns An iterable of the processed audio files.
  */
 export function processAudio(
   input: string | AsyncIterable<Uint8Array> | Blob,
@@ -41,7 +41,7 @@ export function processAudio(
 }
 
 /**
- * The queue for video processing.
+ * The queue for audio processing.
  */
 export const audioQueue = createQueue({
   parallelize: Number(process.env.AUDIO_PARALLELIZE ?? 1),
