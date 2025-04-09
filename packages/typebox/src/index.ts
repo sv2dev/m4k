@@ -6,6 +6,7 @@ export const audioOptionsSchema = T.Object({
   complexFilters: T.Optional(T.String()),
   filters: T.Optional(T.String()),
   duration: T.Optional(T.Union([T.String(), T.Number()])),
+  ext: T.Optional(T.String()),
   format: T.Optional(T.String()),
   inputFormat: T.Optional(T.String()),
   seek: T.Optional(T.Union([T.String(), T.Number()])),
@@ -14,6 +15,21 @@ export const audioOptionsSchema = T.Object({
   options: T.Optional(T.String()),
 });
 
+const imageFormat = T.Union([
+  T.Literal("avif"),
+  T.Literal("jpeg"),
+  T.Literal("png"),
+  T.Literal("webp"),
+  T.Literal("tiff"),
+  T.Literal("dz"),
+  T.Literal("ppm"),
+  T.Literal("fits"),
+  T.Literal("gif"),
+  T.Literal("svg"),
+  T.Literal("heif"),
+  T.Literal("pdf"),
+  T.Literal("jp2"),
+]);
 export const imageOptionsSchema = T.Object({
   rotate: T.Optional(T.Number()),
   resize: T.Optional(
@@ -31,23 +47,8 @@ export const imageOptionsSchema = T.Object({
       ),
     })
   ),
-  format: T.Optional(
-    T.Union([
-      T.Literal("avif"),
-      T.Literal("jpeg"),
-      T.Literal("png"),
-      T.Literal("webp"),
-      T.Literal("tiff"),
-      T.Literal("dz"),
-      T.Literal("ppm"),
-      T.Literal("fits"),
-      T.Literal("gif"),
-      T.Literal("svg"),
-      T.Literal("heif"),
-      T.Literal("pdf"),
-      T.Literal("jp2"),
-    ])
-  ),
+  ext: T.Optional(imageFormat),
+  format: T.Optional(imageFormat),
   quality: T.Optional(T.Number()),
   keepMetadata: T.Optional(T.Boolean()),
   keepExif: T.Optional(T.Boolean()),
@@ -70,6 +71,7 @@ export const videoOptionsSchema = T.Object({
   autopad: T.Optional(T.Union([T.Boolean(), T.String()])),
   aspect: T.Optional(T.Union([T.String(), T.Number()])),
   inputFormat: T.Optional(T.String()),
+  ext: T.Optional(T.String()),
   format: T.Optional(T.String()),
   fps: T.Optional(T.Number()),
   output: T.Optional(T.String()),

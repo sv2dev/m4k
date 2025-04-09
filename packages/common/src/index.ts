@@ -10,6 +10,21 @@ export type ProcessingError = {
   error: string;
 };
 
+type ImageFormat =
+  | "avif"
+  | "jpeg"
+  | "png"
+  | "webp"
+  | "tiff"
+  | "dz"
+  | "ppm"
+  | "fits"
+  | "gif"
+  | "svg"
+  | "heif"
+  | "pdf"
+  | "jp2";
+
 export type ImageOptions = {
   /** The rotation of the image. If not provided, the image will be auto-rotated, according to the EXIF data. To disable auto-rotation, set to `0`. */
   rotate?: number;
@@ -22,21 +37,10 @@ export type ImageOptions = {
     /** The way to resize the image. */
     fit?: "contain" | "cover" | "fill" | "inside" | "outside";
   };
+  /** The extension of the output file. This is the same as the format. */
+  ext?: ImageFormat;
   /** The format of the output file. */
-  format?:
-    | "avif"
-    | "jpeg"
-    | "png"
-    | "webp"
-    | "tiff"
-    | "dz"
-    | "ppm"
-    | "fits"
-    | "gif"
-    | "svg"
-    | "heif"
-    | "pdf"
-    | "jp2";
+  format?: ImageFormat;
   /** The quality of the output file. */
   quality?: number;
   /** Whether to keep the metadata of the image. */
