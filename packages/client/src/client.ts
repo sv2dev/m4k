@@ -1,11 +1,11 @@
 import {
   ProcessedFile,
-  type AudioOptions,
-  type ImageOptions,
   type ProcessingError,
   type Progress,
   type QueuePosition,
-  type VideoOptions,
+  type RemoteAudioOptions,
+  type RemoteImageOptions,
+  type RemoteVideoOptions,
 } from "@m4k/common";
 import { iterableToStream, streamParts } from "@sv2dev/multipart-stream";
 
@@ -26,7 +26,7 @@ export function setFetch(ftch: typeof fetch) {
 export async function* processAudio(
   host: string,
   input: AsyncIterable<Uint8Array> | Blob,
-  opts: AudioOptions | AudioOptions[],
+  opts: RemoteAudioOptions | RemoteAudioOptions[],
   { signal }: { signal?: AbortSignal } = {}
 ) {
   yield* runFetch(`${host}/audio/process`, input, opts, { signal });
@@ -43,7 +43,7 @@ export async function* processAudio(
 export async function* processImage(
   host: string,
   input: AsyncIterable<Uint8Array> | Blob,
-  opts: ImageOptions | ImageOptions[],
+  opts: RemoteImageOptions | RemoteImageOptions[],
   { signal }: { signal?: AbortSignal } = {}
 ) {
   yield* runFetch(`${host}/images/process`, input, opts, { signal });
@@ -60,7 +60,7 @@ export async function* processImage(
 export async function* processVideo(
   host: string,
   input: AsyncIterable<Uint8Array> | Blob,
-  opts: VideoOptions | VideoOptions[],
+  opts: RemoteVideoOptions | RemoteVideoOptions[],
   { signal }: { signal?: AbortSignal } = {}
 ) {
   yield* runFetch(`${host}/videos/process`, input, opts, { signal });

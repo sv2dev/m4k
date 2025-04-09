@@ -1,4 +1,4 @@
-import type { ImageOptions } from "@m4k/common";
+import type { RemoteImageOptions } from "@m4k/common";
 import { imageOptionsSchema } from "@m4k/typebox";
 import { Type as T } from "@sinclair/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
@@ -12,7 +12,7 @@ const compiledOptionsSchema = TypeCompiler.Compile(imageOptionsSchema);
 
 export async function processImageHandler(request: Request) {
   if (!request.body) return error(400, "No body provided");
-  let optsArr: ImageOptions[];
+  let optsArr: RemoteImageOptions[];
   try {
     optsArr = parseOpts(request, compiledOptionsSchema, queryToOptions);
   } catch (err) {
@@ -74,7 +74,7 @@ const querySchema = T.Object({
 });
 const compiledQuerySchema = TypeCompiler.Compile(querySchema);
 
-function queryToOptions(params: unknown): ImageOptions {
+function queryToOptions(params: unknown): RemoteImageOptions {
   const {
     width,
     height,

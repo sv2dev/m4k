@@ -12,7 +12,6 @@ export const audioOptionsSchema = T.Object({
   seek: T.Optional(T.Union([T.String(), T.Number()])),
   name: T.Optional(T.String()),
   output: T.Optional(T.String()),
-  options: T.Optional(T.String()),
 });
 
 const imageFormat = T.Union([
@@ -63,6 +62,8 @@ export const imageOptionsSchema = T.Object({
     })
   ),
   args: T.Optional(T.Array(T.String())),
+  name: T.Optional(T.String()),
+  output: T.Optional(T.String()),
 });
 
 export const videoOptionsSchema = T.Object({
@@ -75,7 +76,6 @@ export const videoOptionsSchema = T.Object({
   ext: T.Optional(T.String()),
   format: T.Optional(T.String()),
   fps: T.Optional(T.Number()),
-  output: T.Optional(T.String()),
   seek: T.Optional(T.Union([T.String(), T.Number()])),
   size: T.Optional(T.Union([T.String()])),
   videoBitrate: T.Optional(T.Union([T.String(), T.Number()])),
@@ -83,4 +83,6 @@ export const videoOptionsSchema = T.Object({
   videoCodec: T.Optional(T.String()),
   videoFilters: T.Optional(T.String()),
   args: T.Optional(T.Array(T.String())),
+  name: T.Optional(T.String()),
+  output: T.Optional(T.String()),
 });

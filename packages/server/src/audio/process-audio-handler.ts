@@ -1,6 +1,7 @@
+import type { RemoteAudioOptions } from "@m4k/common";
 import { audioOptionsSchema } from "@m4k/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
-import { ProcessedFile, processAudio, type AudioOptions } from "m4k";
+import { ProcessedFile, processAudio } from "m4k";
 import { rm } from "node:fs/promises";
 import { basename } from "node:path";
 import { parseOpts } from "../util/request-parsing";
@@ -10,7 +11,7 @@ const compiledOptionsSchema = TypeCompiler.Compile(audioOptionsSchema);
 
 export async function processAudioHandler(request: Request) {
   if (!request.body) return error(400, "No body provided");
-  let opts: (AudioOptions & { output?: string; name?: string })[];
+  let opts: RemoteAudioOptions[];
   try {
     opts = parseOpts(request, compiledOptionsSchema);
   } catch (err) {

@@ -1,6 +1,7 @@
+import type { RemoteVideoOptions } from "@m4k/common";
 import { videoOptionsSchema } from "@m4k/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
-import { ProcessedFile, processVideo, type VideoOptions } from "m4k";
+import { ProcessedFile, processVideo } from "m4k";
 import { rm } from "node:fs/promises";
 import { basename } from "node:path";
 import { parseOpts } from "../util/request-parsing";
@@ -10,7 +11,7 @@ const compiledOptionsSchema = TypeCompiler.Compile(videoOptionsSchema);
 
 export async function processVideoHandler(request: Request) {
   if (!request.body) return error(400, "No body provided");
-  let opts: (VideoOptions & { output?: string; name?: string })[];
+  let opts: RemoteVideoOptions[];
   try {
     opts = parseOpts(request, compiledOptionsSchema);
   } catch (err) {

@@ -1,18 +1,18 @@
-import { streamParts } from "@sv2dev/multipart-stream";
-import { describe, expect, it } from "bun:test";
 import type {
-  ImageOptions,
   ProcessingError,
   Progress,
   QueuePosition,
-} from "m4k";
+  RemoteImageOptions,
+} from "@m4k/common";
+import { streamParts } from "@sv2dev/multipart-stream";
+import { describe, expect, it } from "bun:test";
 import { processImageHandler } from "./process-image-handler";
 
 const fixture = Bun.file("../../fixtures/image.jpeg");
 
 describe("/process", () => {
   it("should process a single image", async () => {
-    const opts: ImageOptions = {
+    const opts: RemoteImageOptions = {
       resize: { width: 100, height: 1000 },
       format: "jpeg",
     };
@@ -36,7 +36,7 @@ describe("/process", () => {
   }, 1000);
 
   it("should stream the queue position", async () => {
-    const opts: ImageOptions = {
+    const opts: RemoteImageOptions = {
       resize: { width: 100, height: 1000 },
       format: "avif",
     };
@@ -73,7 +73,7 @@ describe("/process", () => {
   });
 
   it("should throw if format is invalid", async () => {
-    const opts: ImageOptions = {
+    const opts: RemoteImageOptions = {
       format: "x" as any,
     };
     const res = await processImageHandler(
@@ -114,7 +114,7 @@ describe("/process", () => {
   });
 
   it("should process multiple images", async () => {
-    const opts: ImageOptions[] = [
+    const opts: RemoteImageOptions[] = [
       {
         resize: { width: 100, height: 100 },
         format: "avif",
@@ -148,7 +148,7 @@ describe("/process", () => {
   });
 
   it("should not stream back, if output is provided", async () => {
-    const opts: ImageOptions = {
+    const opts: RemoteImageOptions = {
       format: "avif",
       output: "/tmp/test-output.avif",
     };

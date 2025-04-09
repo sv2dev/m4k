@@ -1,18 +1,18 @@
-import { streamParts } from "@sv2dev/multipart-stream";
-import { describe, expect, it } from "bun:test";
 import type {
-  AudioOptions,
   ProcessingError,
   Progress,
   QueuePosition,
-} from "m4k";
+  RemoteAudioOptions,
+} from "@m4k/common";
+import { streamParts } from "@sv2dev/multipart-stream";
+import { describe, expect, it } from "bun:test";
 import { processAudioHandler } from "./process-audio-handler";
 
 const fixture = Bun.file(`../../fixtures/audio.mp3`);
 
 describe("/process", () => {
   it("should process an audio file", async () => {
-    const opts: AudioOptions = {
+    const opts: RemoteAudioOptions = {
       format: "ogg",
       codec: "libvorbis",
     };
@@ -34,7 +34,7 @@ describe("/process", () => {
   });
 
   it("should process multiple audio files in sequence", async () => {
-    const opts: AudioOptions = {
+    const opts: RemoteAudioOptions = {
       format: "ogg",
       codec: "libvorbis",
     };
@@ -68,7 +68,7 @@ describe("/process", () => {
   });
 
   it("should stream the queue position", async () => {
-    const opts: AudioOptions = {
+    const opts: RemoteAudioOptions = {
       format: "ogg",
       codec: "libvorbis",
     };
@@ -99,7 +99,7 @@ describe("/process", () => {
   });
 
   it("should not stream back, if output is provided", async () => {
-    const opts: AudioOptions = {
+    const opts: RemoteAudioOptions = {
       format: "ogg",
       codec: "libvorbis",
       output: "/tmp/test-output.ogg",

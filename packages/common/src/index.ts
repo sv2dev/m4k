@@ -62,9 +62,12 @@ export type ImageOptions = {
     /** The height of the crop. */
     height: number;
   };
+};
+
+export type RemoteImageOptions = ImageOptions & {
   /** The name of the output file. */
   name?: string;
-  /** The output path of the file. */
+  /** The output path of the file. This can be a local path or an S3 path. */
   output?: string;
 };
 
@@ -105,9 +108,12 @@ export type VideoOptions = {
   videoFilters?: string;
   /** Custom ffmpeg arguments to apply to this video processing. */
   args?: string[];
+};
+
+export type RemoteVideoOptions = VideoOptions & {
   /** The name of the output file. */
   name?: string;
-  /** The output path of the file. */
+  /** The output path of the file. This can be a local path or an S3 path. */
   output?: string;
 };
 
@@ -132,9 +138,12 @@ export type AudioOptions = {
   seek?: number | string;
   /** Custom ffmpeg arguments to apply to this audio processing. */
   args?: string[];
+};
+
+export type RemoteAudioOptions = AudioOptions & {
   /** The name of the output file. */
   name?: string;
-  /** The output path of the file. */
+  /** The output path of the file. This can be a local path or an S3 path. */
   output?: string;
 };
 
