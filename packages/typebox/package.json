@@ -1,6 +1,6 @@
 {
-  "name": "@m4k/server",
-  "version": "0.2.3",
+  "name": "@m4k/typebox",
+  "version": "0.1.0",
   "type": "module",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -10,18 +10,15 @@
     "dev": "bun --watch src/index.ts",
     "prepublishOnly": "bun run build",
     "build": "tsc -b",
-    "build:docker": "bun build ./src/index.ts --outfile dist/server/app.js --target bun",
     "typecheck": "tsc --noEmit",
     "test": "bun test"
   },
+  "dependencies": {
+    "@sinclair/typebox": "^0.34.30"
+  },
   "devDependencies": {
-    "@sinclair/typebox": "^0.34.30",
     "@types/bun": "^1.2.5",
     "typescript": "^5.0.0"
-  },
-  "dependencies": {
-    "@m4k/typebox": "workspace:^0.1.0",
-    "m4k": "workspace:^0.2.3"
   },
   "repository": "github:sv2dev/m4k"
 }

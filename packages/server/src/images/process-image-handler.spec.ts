@@ -12,15 +12,15 @@ const fixture = Bun.file("../../fixtures/image.jpeg");
 
 describe("/process", () => {
   it("should process a single image", async () => {
-    const query = new URLSearchParams({
-      width: "100",
-      height: "1000",
+    const opts: ImageOptions = {
+      resize: { width: 100, height: 1000 },
       format: "jpeg",
-    });
+    };
     const response = await processImageHandler(
-      new Request(`http://localhost:3000/images/process?${query}`, {
+      new Request(`http://localhost:3000/images/process`, {
         method: "POST",
         body: fixture,
+        headers: { "X-Options": JSON.stringify(opts) },
       })
     );
 
@@ -36,20 +36,22 @@ describe("/process", () => {
   }, 1000);
 
   it("should stream the queue position", async () => {
-    const query = new URLSearchParams({
-      width: "100",
-      height: "1000",
-    });
+    const opts: ImageOptions = {
+      resize: { width: 100, height: 1000 },
+      format: "avif",
+    };
     const r1 = processImageHandler(
-      new Request(`http://localhost:3000/images/process?${query}`, {
+      new Request(`http://localhost:3000/images/process`, {
         method: "POST",
         body: fixture,
+        headers: { "X-Options": JSON.stringify(opts) },
       })
     );
     const r2 = processImageHandler(
-      new Request(`http://localhost:3000/images/process?${query}`, {
+      new Request(`http://localhost:3000/images/process`, {
         method: "POST",
         body: fixture,
+        headers: { "X-Options": JSON.stringify(opts) },
       })
     );
 
@@ -71,11 +73,14 @@ describe("/process", () => {
   });
 
   it("should throw if format is invalid", async () => {
-    const query = new URLSearchParams({ format: "x" });
+    const opts: ImageOptions = {
+      format: "x" as any,
+    };
     const res = await processImageHandler(
-      new Request(`http://localhost:3000/images/process?${query}`, {
+      new Request(`http://localhost:3000/images/process`, {
         method: "POST",
         body: fixture,
+        headers: { "X-Options": JSON.stringify(opts) },
       })
     );
 
@@ -109,24 +114,23 @@ describe("/process", () => {
   });
 
   it("should process multiple images", async () => {
+    const opts: ImageOptions[] = [
+      {
+        resize: { width: 100, height: 100 },
+        format: "avif",
+        quality: 40,
+      },
+      {
+        resize: { width: 100, height: 100 },
+        format: "webp",
+        quality: 40,
+      },
+    ];
     const response = await processImageHandler(
       new Request(`http://localhost:3000/images/process`, {
         method: "POST",
         body: fixture,
-        headers: {
-          "X-Options": JSON.stringify([
-            {
-              resize: { width: 100, height: 100 },
-              format: "avif",
-              quality: 40,
-            },
-            {
-              resize: { width: 100, height: 100 },
-              format: "webp",
-              quality: 40,
-            },
-          ] satisfies ImageOptions[]),
-        },
+        headers: { "X-Options": JSON.stringify(opts) },
       })
     );
 
@@ -144,15 +148,16 @@ describe("/process", () => {
   });
 
   it("should not stream back, if output is provided", async () => {
-    const query = new URLSearchParams({
+    const opts: ImageOptions = {
       format: "avif",
       output: "/tmp/test-output.avif",
-    });
+    };
 
     const response = await processImageHandler(
-      new Request(`http://localhost:3000/images/process?${query}`, {
+      new Request(`http://localhost:3000/images/process`, {
         method: "POST",
         body: fixture,
+        headers: { "X-Options": JSON.stringify(opts) },
       })
     );
 

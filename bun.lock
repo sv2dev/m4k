@@ -10,7 +10,7 @@
     },
     "packages/client": {
       "name": "@m4k/client",
-      "version": "0.1.2",
+      "version": "0.2.3",
       "dependencies": {
         "@m4k/common": "workspace:^",
       },
@@ -23,16 +23,16 @@
     },
     "packages/common": {
       "name": "@m4k/common",
-      "version": "0.1.0",
+      "version": "0.2.2",
       "devDependencies": {
         "typescript": "^5.0.0",
       },
     },
     "packages/core": {
       "name": "m4k",
-      "version": "0.1.2",
+      "version": "0.2.3",
       "dependencies": {
-        "@m4k/common": "workspace:^",
+        "@m4k/common": "workspace:^0.2.2",
       },
       "devDependencies": {
         "@ffmpeg-installer/ffmpeg": "^1.1.0",
@@ -45,14 +45,26 @@
     },
     "packages/server": {
       "name": "@m4k/server",
-      "version": "0.1.2",
+      "version": "0.2.3",
       "dependencies": {
-        "m4k": "workspace:^",
+        "@m4k/typebox": "workspace:^0.1.0",
+        "m4k": "workspace:^0.2.3",
       },
       "devDependencies": {
         "@sinclair/typebox": "^0.34.30",
         "@types/bun": "^1.2.5",
         "typescript": "^5.0.0",
+      },
+    },
+    "packages/typebox": {
+      "name": "@m4k/typebox",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@types/bun": "^1.2.5",
+        "typescript": "^5.0.0",
+      },
+      "peerDependencies": {
+        "@sinclair/typebox": "^0.34.30",
       },
     },
   },
@@ -120,6 +132,8 @@
     "@m4k/common": ["@m4k/common@workspace:packages/common"],
 
     "@m4k/server": ["@m4k/server@workspace:packages/server"],
+
+    "@m4k/typebox": ["@m4k/typebox@workspace:packages/typebox"],
 
     "@sinclair/typebox": ["@sinclair/typebox@0.34.30", "", {}, "sha512-gFB3BiqjDxEoadW0zn+xyMVb7cLxPCoblVn2C/BKpI41WPYi2d6fwHAlynPNZ5O/Q4WEiujdnJzVtvG/Jc2CBQ=="],
 

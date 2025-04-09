@@ -1,20 +1,26 @@
 import { streamParts } from "@sv2dev/multipart-stream";
 import { describe, expect, it } from "bun:test";
-import type { ProcessingError, Progress, QueuePosition } from "m4k";
+import type {
+  AudioOptions,
+  ProcessingError,
+  Progress,
+  QueuePosition,
+} from "m4k";
 import { processAudioHandler } from "./process-audio-handler";
 
 const fixture = Bun.file(`../../fixtures/audio.mp3`);
 
 describe("/process", () => {
   it("should process an audio file", async () => {
-    const query = new URLSearchParams({
+    const opts: AudioOptions = {
       format: "ogg",
       codec: "libvorbis",
-    });
+    };
     const response = await processAudioHandler(
-      new Request(`http://localhost:3000/audio/process?${query}`, {
+      new Request(`http://localhost:3000/audio/process`, {
         method: "POST",
         body: fixture,
+        headers: { "X-Options": JSON.stringify(opts) },
       })
     );
 
@@ -28,22 +34,24 @@ describe("/process", () => {
   });
 
   it("should process multiple audio files in sequence", async () => {
-    const query = new URLSearchParams({
+    const opts: AudioOptions = {
       format: "ogg",
       codec: "libvorbis",
-    });
+    };
     const res1 = await processAudioHandler(
-      new Request(`http://localhost:3000/audio/process?${query}`, {
+      new Request(`http://localhost:3000/audio/process`, {
         method: "POST",
         body: fixture,
+        headers: { "X-Options": JSON.stringify(opts) },
       })
     );
     const coll1 = await collectResponse(res1);
 
     const res2 = await processAudioHandler(
-      new Request(`http://localhost:3000/audio/process?${query}`, {
+      new Request(`http://localhost:3000/audio/process`, {
         method: "POST",
         body: fixture,
+        headers: { "X-Options": JSON.stringify(opts) },
       })
     );
     const coll2 = await collectResponse(res2);
@@ -60,21 +68,23 @@ describe("/process", () => {
   });
 
   it("should stream the queue position", async () => {
-    const query = new URLSearchParams({
+    const opts: AudioOptions = {
       format: "ogg",
       codec: "libvorbis",
-    });
+    };
     const res1 = processAudioHandler(
-      new Request(`http://localhost:3000/audio/process?${query}`, {
+      new Request(`http://localhost:3000/audio/process`, {
         method: "POST",
         body: fixture,
+        headers: { "X-Options": JSON.stringify(opts) },
       })
     );
     await Bun.sleep(0); // Make sure the first request is queued
     const res2 = processAudioHandler(
-      new Request(`http://localhost:3000/audio/process?${query}`, {
+      new Request(`http://localhost:3000/audio/process`, {
         method: "POST",
         body: fixture,
+        headers: { "X-Options": JSON.stringify(opts) },
       })
     );
 
@@ -89,16 +99,17 @@ describe("/process", () => {
   });
 
   it("should not stream back, if output is provided", async () => {
-    const query = new URLSearchParams({
+    const opts: AudioOptions = {
       format: "ogg",
       codec: "libvorbis",
       output: "/tmp/test-output.ogg",
-    });
+    };
 
     const response = await processAudioHandler(
-      new Request(`http://localhost:3000/audio/process?${query}`, {
+      new Request(`http://localhost:3000/audio/process`, {
         method: "POST",
         body: fixture,
+        headers: { "X-Options": JSON.stringify(opts) },
       })
     );
 
