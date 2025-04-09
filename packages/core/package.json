@@ -6,6 +6,16 @@
   "types": "./lib/index.d.ts",
   "module": "./lib/index.js",
   "license": "MIT",
+  "description": "Media toolkit for node, bun, and deno",
+  "keywords": [
+    "media",
+    "ffmpeg",
+    "video",
+    "audio",
+    "image",
+    "sharp"
+  ],
+  "author": "sv2dev",
   "scripts": {
     "prepublishOnly": "bun run build",
     "build": "tsc -b",

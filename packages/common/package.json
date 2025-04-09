@@ -6,6 +6,8 @@
   "types": "./lib/index.d.ts",
   "module": "./lib/index.js",
   "license": "MIT",
+  "description": "Common types and utilities for m4k",
+  "author": "sv2dev",
   "scripts": {
     "prepublishOnly": "bun run build",
     "build": "tsc -b",

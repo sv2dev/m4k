@@ -6,6 +6,17 @@
   "types": "./lib/index.d.ts",
   "module": "./lib/index.js",
   "license": "MIT",
+  "description": "Server for m4k",
+  "keywords": [
+    "m4k",
+    "server",
+    "ffmpeg",
+    "video",
+    "audio",
+    "image",
+    "sharp"
+  ],
+  "author": "sv2dev",
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "prepublishOnly": "bun run build",

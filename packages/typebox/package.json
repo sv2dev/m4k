@@ -6,6 +6,8 @@
   "types": "./lib/index.d.ts",
   "module": "./lib/index.js",
   "license": "MIT",
+  "description": "TypeBox schema definitions for M4K",
+  "author": "sv2dev",
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "prepublishOnly": "bun run build",
