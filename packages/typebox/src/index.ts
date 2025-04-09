@@ -62,6 +62,7 @@ export const imageOptionsSchema = T.Object({
       height: T.Number(),
     })
   ),
+  args: T.Optional(T.Array(T.String())),
 });
 
 export const videoOptionsSchema = T.Object({
@@ -81,5 +82,5 @@ export const videoOptionsSchema = T.Object({
   videoBitrateConstant: T.Optional(T.Boolean()),
   videoCodec: T.Optional(T.String()),
   videoFilters: T.Optional(T.String()),
-  options: T.Optional(T.String()),
+  args: T.Optional(T.Array(T.String())),
 });

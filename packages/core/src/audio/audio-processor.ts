@@ -28,6 +28,7 @@ export function processAudio(
         if (o.filters) a.push("-af", o.filters);
         if (o.complexFilters) a.push("-filter_complex", o.complexFilters);
         if (o.codec) a.push("-c:a", o.codec);
+        if (o.args) a.push(...o.args);
         args.push({
           args: a,
           ext: o.ext ?? getExtension(o.format ?? "mp3"),

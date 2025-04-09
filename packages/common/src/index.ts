@@ -103,6 +103,8 @@ export type VideoOptions = {
   videoCodec?: string;
   /** The filters to apply to the video. */
   videoFilters?: string;
+  /** Custom ffmpeg arguments to apply to this video processing. */
+  args?: string[];
   /** The name of the output file. */
   name?: string;
   /** The output path of the file. */
@@ -128,6 +130,8 @@ export type AudioOptions = {
   inputFormat?: string;
   /** The seek time of the audio. */
   seek?: number | string;
+  /** Custom ffmpeg arguments to apply to this audio processing. */
+  args?: string[];
   /** The name of the output file. */
   name?: string;
   /** The output path of the file. */
