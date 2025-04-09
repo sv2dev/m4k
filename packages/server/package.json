@@ -15,9 +15,9 @@
     "test": "bun test"
   },
   "devDependencies": {
-    "@sinclair/typebox": "^0.34.30",
-    "@types/bun": "^1.2.5",
-    "typescript": "^5.0.0"
+    "@sinclair/typebox": "^0.34.33",
+    "@types/bun": "^1.2.9",
+    "typescript": "^5.8.3"
   },
   "dependencies": {
     "@m4k/typebox": "workspace:^0.1.0",

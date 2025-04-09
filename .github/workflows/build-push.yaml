@@ -65,7 +65,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.2.5
+          bun-version: 1.2.9
           registry-url: "https://registry.npmjs.org/"
       - run: |
           bun install
@@ -88,7 +88,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.2.5
+          bun-version: 1.2.9
           registry-url: "https://registry.npmjs.org/"
       - run: |
           bun install
@@ -112,7 +112,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.2.5
+          bun-version: 1.2.9
           registry-url: "https://registry.npmjs.org/"
       - run: |
           bun install
@@ -136,7 +136,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.2.5
+          bun-version: 1.2.9
           registry-url: "https://registry.npmjs.org/"
       - run: |
           bun install

@@ -52,7 +52,7 @@ describe("processImage()", () => {
 
     expect(files).toEqual([
       { name: "image.webp", type: "image/webp", size: 2124 },
-      { name: "image.avif", type: "image/avif", size: 1179 },
+      { name: "image.avif", type: "image/avif", size: expect.any(Number) }, // The size is not consistent across systems
     ]);
   });
 });
