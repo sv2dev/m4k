@@ -37,6 +37,7 @@ export function processImage(
           colorspace,
           crop,
           format = "avif",
+          ext = format,
           keepExif,
           keepIcc,
           keepMetadata,
@@ -64,13 +65,9 @@ export function processImage(
             top: crop.top ?? 0,
           });
         }
-        s = s.toFormat(format, { quality });
+        s = s.toFormat(ext, { quality });
 
-        return new ProcessedFile(
-          `file${idx + 1}.${format}`,
-          `image/${format}`,
-          s
-        );
+        return new ProcessedFile(`file${idx + 1}.${ext}`, `image/${ext}`, s);
       }
     );
     let done = 0;

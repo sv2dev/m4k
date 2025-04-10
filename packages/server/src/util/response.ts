@@ -44,6 +44,7 @@ export async function queueAndStream(
       }
     } catch (err) {
       // err can be undefined, if the connection was aborted
+      console.warn(err);
       if (err) multipart.part({ payload: { error: (err as Error).message } });
     } finally {
       clear();

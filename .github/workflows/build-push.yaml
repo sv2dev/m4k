@@ -15,6 +15,7 @@ jobs:
       core-changed: ${{ steps.check.outputs.core-changed }}
       server-changed: ${{ steps.check.outputs.server-changed }}
       client-changed: ${{ steps.check.outputs.client-changed }}
+      typebox-changed: ${{ steps.check.outputs.typebox-changed }}
       server-version: ${{ steps.check.outputs.server-version }}
     steps:
       - uses: actions/checkout@v4
@@ -37,20 +38,24 @@ jobs:
           CURRENT_CORE_VERSION=$(get_version "packages/core/package.json")
           CURRENT_SERVER_VERSION=$(get_version "packages/server/package.json")
           CURRENT_CLIENT_VERSION=$(get_version "packages/client/package.json")
+          CURRENT_TYPEBOX_VERSION=$(get_version "packages/typebox/package.json")
           git checkout HEAD^
           PREVIOUS_COMMON_VERSION=$(get_version "packages/common/package.json")
           PREVIOUS_CORE_VERSION=$(get_version "packages/core/package.json")
           PREVIOUS_SERVER_VERSION=$(get_version "packages/server/package.json")
           PREVIOUS_CLIENT_VERSION=$(get_version "packages/client/package.json")
+          PREVIOUS_TYPEBOX_VERSION=$(get_version "packages/typebox/package.json")
 
           common_changed=$([ "$CURRENT_COMMON_VERSION" != "$PREVIOUS_COMMON_VERSION" ] && echo "true" || echo "false")
           core_changed=$([ "$CURRENT_CORE_VERSION" != "$PREVIOUS_CORE_VERSION" ] && echo "true" || echo "false")
           server_changed=$([ "$CURRENT_SERVER_VERSION" != "$PREVIOUS_SERVER_VERSION" ] && echo "true" || echo "false")
           client_changed=$([ "$CURRENT_CLIENT_VERSION" != "$PREVIOUS_CLIENT_VERSION" ] && echo "true" || echo "false")
+          typebox_changed=$([ "$CURRENT_TYPEBOX_VERSION" != "$PREVIOUS_TYPEBOX_VERSION" ] && echo "true" || echo "false")
           echo "common-changed=$common_changed" >> "$GITHUB_OUTPUT"
           echo "core-changed=$core_changed" >> "$GITHUB_OUTPUT"
           echo "server-changed=$server_changed" >> "$GITHUB_OUTPUT"
           echo "client-changed=$client_changed" >> "$GITHUB_OUTPUT"
+          echo "typebox-changed=$typebox_changed" >> "$GITHUB_OUTPUT"
           echo "server-version=$CURRENT_SERVER_VERSION" >> "$GITHUB_OUTPUT"
   publish-common:
     name: Publish common package
@@ -65,10 +70,10 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.2.5
+          bun-version: 1.2.9
           registry-url: "https://registry.npmjs.org/"
       - run: |
-          bun install
+          bun install --frozen-lockfile
           bun run build
       - name: Publish package
         run: bun publish --access public
@@ -88,10 +93,10 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.2.5
+          bun-version: 1.2.9
           registry-url: "https://registry.npmjs.org/"
       - run: |
-          bun install
+          bun install --frozen-lockfile
           bun run build
       - name: Publish package
         run: bun publish --access public
@@ -112,10 +117,10 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.2.5
+          bun-version: 1.2.9
           registry-url: "https://registry.npmjs.org/"
       - run: |
-          bun install
+          bun install --frozen-lockfile
           bun run build
       - name: Publish package
         run: bun publish --access public
@@ -136,14 +141,38 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.2.5
+          bun-version: 1.2.9
           registry-url: "https://registry.npmjs.org/"
       - run: |
-          bun install
+          bun install --frozen-lockfile
           bun run build
       - name: Publish package
         run: bun publish --access public
         working-directory: ./packages/client
+        env:
+          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-typebox:
+    name: Publish typebox package
+    needs: check-version
+    if: needs.check-version.outputs.typebox-changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.9
+          registry-url: "https://registry.npmjs.org/"
+      - run: |
+          bun install --frozen-lockfile
+          bun run build
+      - name: Publish package
+        run: bun publish --access public
+        working-directory: ./packages/typebox
         env:
           NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
 

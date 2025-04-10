@@ -1,26 +1,26 @@
-import { streamParts } from "@sv2dev/multipart-stream";
-import { describe, expect, it } from "bun:test";
 import type {
-  ImageOptions,
   ProcessingError,
   Progress,
   QueuePosition,
-} from "m4k";
+  RemoteImageOptions,
+} from "@m4k/common";
+import { streamParts } from "@sv2dev/multipart-stream";
+import { describe, expect, it } from "bun:test";
 import { processImageHandler } from "./process-image-handler";
 
 const fixture = Bun.file("../../fixtures/image.jpeg");
 
 describe("/process", () => {
   it("should process a single image", async () => {
-    const query = new URLSearchParams({
-      width: "100",
-      height: "1000",
+    const opts: RemoteImageOptions = {
+      resize: { width: 100, height: 1000 },
       format: "jpeg",
-    });
+    };
     const response = await processImageHandler(
-      new Request(`http://localhost:3000/images/process?${query}`, {
+      new Request(`http://localhost:3000/images/process`, {
         method: "POST",
         body: fixture,
+        headers: { "X-Options": JSON.stringify(opts) },
       })
     );
 
@@ -36,20 +36,22 @@ describe("/process", () => {
   }, 1000);
 
   it("should stream the queue position", async () => {
-    const query = new URLSearchParams({
-      width: "100",
-      height: "1000",
-    });
+    const opts: RemoteImageOptions = {
+      resize: { width: 100, height: 1000 },
+      format: "avif",
+    };
     const r1 = processImageHandler(
-      new Request(`http://localhost:3000/images/process?${query}`, {
+      new Request(`http://localhost:3000/images/process`, {
         method: "POST",
         body: fixture,
+        headers: { "X-Options": JSON.stringify(opts) },
       })
     );
     const r2 = processImageHandler(
-      new Request(`http://localhost:3000/images/process?${query}`, {
+      new Request(`http://localhost:3000/images/process`, {
         method: "POST",
         body: fixture,
+        headers: { "X-Options": JSON.stringify(opts) },
       })
     );
 
@@ -59,23 +61,26 @@ describe("/process", () => {
     expect(collected1).toEqual([
       { position: 0 },
       { progress: 0 },
-      { filename: "file1.avif", type: "image/avif", size: 500 },
+      { filename: "file1.avif", type: "image/avif", size: 480 },
       { progress: 100 },
     ]);
     expect(collected2).toEqual([
       { position: 0 },
       { progress: 0 },
-      { filename: "file1.avif", type: "image/avif", size: 500 },
+      { filename: "file1.avif", type: "image/avif", size: 480 },
       { progress: 100 },
     ]);
   });
 
   it("should throw if format is invalid", async () => {
-    const query = new URLSearchParams({ format: "x" });
+    const opts: RemoteImageOptions = {
+      format: "x" as any,
+    };
     const res = await processImageHandler(
-      new Request(`http://localhost:3000/images/process?${query}`, {
+      new Request(`http://localhost:3000/images/process`, {
         method: "POST",
         body: fixture,
+        headers: { "X-Options": JSON.stringify(opts) },
       })
     );
 
@@ -109,24 +114,23 @@ describe("/process", () => {
   });
 
   it("should process multiple images", async () => {
+    const opts: RemoteImageOptions[] = [
+      {
+        resize: { width: 100, height: 100 },
+        format: "avif",
+        quality: 40,
+      },
+      {
+        resize: { width: 100, height: 100 },
+        format: "webp",
+        quality: 40,
+      },
+    ];
     const response = await processImageHandler(
       new Request(`http://localhost:3000/images/process`, {
         method: "POST",
         body: fixture,
-        headers: {
-          "X-Options": JSON.stringify([
-            {
-              resize: { width: 100, height: 100 },
-              format: "avif",
-              quality: 40,
-            },
-            {
-              resize: { width: 100, height: 100 },
-              format: "webp",
-              quality: 40,
-            },
-          ] satisfies ImageOptions[]),
-        },
+        headers: { "X-Options": JSON.stringify(opts) },
       })
     );
 
@@ -136,7 +140,7 @@ describe("/process", () => {
     expect(collected).toEqual([
       { position: 0 },
       { progress: 0 },
-      { filename: "file1.avif", type: "image/avif", size: 457 },
+      { filename: "file1.avif", type: "image/avif", size: 437 },
       { progress: 50 },
       { filename: "file2.webp", type: "image/webp", size: 204 },
       { progress: 100 },
@@ -144,15 +148,16 @@ describe("/process", () => {
   });
 
   it("should not stream back, if output is provided", async () => {
-    const query = new URLSearchParams({
+    const opts: RemoteImageOptions = {
       format: "avif",
       output: "/tmp/test-output.avif",
-    });
+    };
 
     const response = await processImageHandler(
-      new Request(`http://localhost:3000/images/process?${query}`, {
+      new Request(`http://localhost:3000/images/process`, {
         method: "POST",
         body: fixture,
+        headers: { "X-Options": JSON.stringify(opts) },
       })
     );
 

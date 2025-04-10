@@ -1,34 +1,26 @@
 {
-  "name": "@m4k/client",
-  "version": "0.2.4",
+  "name": "@m4k/typebox",
+  "version": "0.1.0",
   "type": "module",
-  "module": "./lib/index.js",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
+  "module": "./lib/index.js",
   "license": "MIT",
-  "description": "Client for m4k server",
-  "keywords": [
-    "m4k",
-    "client",
-    "video",
-    "audio",
-    "image"
-  ],
+  "description": "TypeBox schema definitions for M4K",
   "author": "sv2dev",
   "scripts": {
+    "dev": "bun --watch src/index.ts",
     "prepublishOnly": "bun run build",
     "build": "tsc -b",
     "typecheck": "tsc --noEmit",
     "test": "bun test"
   },
+  "dependencies": {
+    "@sinclair/typebox": "^0.34.33"
+  },
   "devDependencies": {
-    "@m4k/server": "workspace:^0.2.4",
     "@types/bun": "^1.2.9",
     "typescript": "^5.8.3"
-  },
-  "dependencies": {
-    "@m4k/common": "workspace:^0.2.3",
-    "@sv2dev/multipart-stream": "^0.2.0"
   },
   "repository": "github:sv2dev/m4k"
 }

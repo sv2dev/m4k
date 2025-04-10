@@ -8,10 +8,10 @@ jobs:
   test:
     name: Run all tests
     runs-on: ubuntu-latest
-    container: oven/bun:1.2.5
+    container: oven/bun:1.2.9
     steps:
       - uses: actions/checkout@v4
-      - run: bun install
+      - run: bun install --frozen-lockfile
       - run: bun run build
       - run: bun run typecheck
       - run: bun run test

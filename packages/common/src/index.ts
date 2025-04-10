@@ -10,6 +10,21 @@ export type ProcessingError = {
   error: string;
 };
 
+type ImageFormat =
+  | "avif"
+  | "jpeg"
+  | "png"
+  | "webp"
+  | "tiff"
+  | "dz"
+  | "ppm"
+  | "fits"
+  | "gif"
+  | "svg"
+  | "heif"
+  | "pdf"
+  | "jp2";
+
 export type ImageOptions = {
   /** The rotation of the image. If not provided, the image will be auto-rotated, according to the EXIF data. To disable auto-rotation, set to `0`. */
   rotate?: number;
@@ -22,21 +37,10 @@ export type ImageOptions = {
     /** The way to resize the image. */
     fit?: "contain" | "cover" | "fill" | "inside" | "outside";
   };
+  /** The extension of the output file. This is the same as the format. */
+  ext?: ImageFormat;
   /** The format of the output file. */
-  format?:
-    | "avif"
-    | "jpeg"
-    | "png"
-    | "webp"
-    | "tiff"
-    | "dz"
-    | "ppm"
-    | "fits"
-    | "gif"
-    | "svg"
-    | "heif"
-    | "pdf"
-    | "jp2";
+  format?: ImageFormat;
   /** The quality of the output file. */
   quality?: number;
   /** Whether to keep the metadata of the image. */
@@ -58,9 +62,12 @@ export type ImageOptions = {
     /** The height of the crop. */
     height: number;
   };
+};
+
+export type RemoteImageOptions = ImageOptions & {
   /** The name of the output file. */
   name?: string;
-  /** The output path of the file. */
+  /** The output path of the file. This can be a local path or an S3 path. */
   output?: string;
 };
 
@@ -99,9 +106,14 @@ export type VideoOptions = {
   videoCodec?: string;
   /** The filters to apply to the video. */
   videoFilters?: string;
+  /** Custom ffmpeg arguments to apply to this video processing. */
+  args?: string[];
+};
+
+export type RemoteVideoOptions = VideoOptions & {
   /** The name of the output file. */
   name?: string;
-  /** The output path of the file. */
+  /** The output path of the file. This can be a local path or an S3 path. */
   output?: string;
 };
 
@@ -124,9 +136,14 @@ export type AudioOptions = {
   inputFormat?: string;
   /** The seek time of the audio. */
   seek?: number | string;
+  /** Custom ffmpeg arguments to apply to this audio processing. */
+  args?: string[];
+};
+
+export type RemoteAudioOptions = AudioOptions & {
   /** The name of the output file. */
   name?: string;
-  /** The output path of the file. */
+  /** The output path of the file. This can be a local path or an S3 path. */
   output?: string;
 };
 

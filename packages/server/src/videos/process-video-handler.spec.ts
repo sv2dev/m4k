@@ -1,6 +1,11 @@
+import type {
+  ProcessingError,
+  Progress,
+  QueuePosition,
+  RemoteVideoOptions,
+} from "@m4k/common";
 import { streamParts } from "@sv2dev/multipart-stream";
 import { describe, expect, it } from "bun:test";
-import type { ProcessingError, Progress, QueuePosition } from "m4k";
 import { processVideoHandler } from "./process-video-handler";
 
 const fixture = Bun.file(`../../fixtures/video.mp4`);
@@ -29,23 +34,25 @@ describe("/process", () => {
   });
 
   it("should process multiple videos in sequence", async () => {
-    const query = new URLSearchParams({
+    const opts: RemoteVideoOptions = {
       format: "mp4",
       videoCodec: "copy",
       audioCodec: "copy",
-    });
+    };
     const res1 = await processVideoHandler(
-      new Request(`http://localhost:3000/videos/process?${query}`, {
+      new Request(`http://localhost:3000/videos/process`, {
         method: "POST",
         body: fixture,
+        headers: { "X-Options": JSON.stringify(opts) },
       })
     );
     const coll1 = await collectResponse(res1);
 
     const res2 = await processVideoHandler(
-      new Request(`http://localhost:3000/videos/process?${query}`, {
+      new Request(`http://localhost:3000/videos/process`, {
         method: "POST",
         body: fixture,
+        headers: { "X-Options": JSON.stringify(opts) },
       })
     );
     const coll2 = await collectResponse(res2);
@@ -62,22 +69,24 @@ describe("/process", () => {
   });
 
   it("should stream the queue position", async () => {
-    const query = new URLSearchParams({
+    const opts: RemoteVideoOptions = {
       format: "mp4",
       videoCodec: "copy",
       audioCodec: "copy",
-    });
+    };
     const res1 = processVideoHandler(
-      new Request(`http://localhost:3000/videos/process?${query}`, {
+      new Request(`http://localhost:3000/videos/process`, {
         method: "POST",
         body: fixture,
+        headers: { "X-Options": JSON.stringify(opts) },
       })
     );
     await Bun.sleep(0); // Make sure the first request is queued
     const res2 = processVideoHandler(
-      new Request(`http://localhost:3000/videos/process?${query}`, {
+      new Request(`http://localhost:3000/videos/process`, {
         method: "POST",
         body: fixture,
+        headers: { "X-Options": JSON.stringify(opts) },
       })
     );
 
@@ -92,17 +101,18 @@ describe("/process", () => {
   });
 
   it("should not stream back, if output is provided", async () => {
-    const query = new URLSearchParams({
+    const opts: RemoteVideoOptions = {
       format: "mp4",
       videoCodec: "copy",
       audioCodec: "copy",
       output: "/tmp/test-output.mp4",
-    });
+    };
 
     const response = await processVideoHandler(
-      new Request(`http://localhost:3000/videos/process?${query}`, {
+      new Request(`http://localhost:3000/videos/process`, {
         method: "POST",
         body: fixture,
+        headers: { "X-Options": JSON.stringify(opts) },
       })
     );
 

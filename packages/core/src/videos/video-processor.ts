@@ -35,6 +35,7 @@ export function processVideo(
         if (o.size) a.push("-scale", o.size);
         if (o.videoCodec) a.push("-c:v", o.videoCodec);
         if (o.audioCodec) a.push("-c:a", o.audioCodec);
+        if (o.args) a.push(...o.args);
         args.push({
           args: a,
           ext: o.ext ?? getExtension(o.format ?? "mp4"),

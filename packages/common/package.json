@@ -1,18 +1,20 @@
 {
   "name": "@m4k/common",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "type": "module",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "module": "./lib/index.js",
   "license": "MIT",
+  "description": "Common types and utilities for m4k",
+  "author": "sv2dev",
   "scripts": {
     "prepublishOnly": "bun run build",
     "build": "tsc -b",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "typescript": "^5.0.0"
+    "typescript": "^5.8.3"
   },
   "repository": "github:sv2dev/m4k"
 }
