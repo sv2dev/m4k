@@ -1,6 +1,6 @@
 {
   "name": "@m4k/client",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "type": "module",
   "module": "./lib/index.js",
   "main": "./lib/index.js",
@@ -22,12 +22,12 @@
     "test": "bun test"
   },
   "devDependencies": {
-    "@m4k/server": "workspace:^0.2.3",
+    "@m4k/server": "workspace:^0.2.4",
     "@types/bun": "^1.2.9",
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "@m4k/common": "workspace:^0.2.2",
+    "@m4k/common": "workspace:^0.2.3",
     "@sv2dev/multipart-stream": "^0.2.0"
   },
   "repository": "github:sv2dev/m4k"

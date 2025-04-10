@@ -10,7 +10,7 @@
     },
     "packages/client": {
       "name": "@m4k/client",
-      "version": "0.2.3",
+      "version": "0.2.4",
       "dependencies": {
         "@m4k/common": "workspace:^0.2.2",
         "@sv2dev/multipart-stream": "^0.2.0",
@@ -23,16 +23,16 @@
     },
     "packages/common": {
       "name": "@m4k/common",
-      "version": "0.2.2",
+      "version": "0.2.3",
       "devDependencies": {
         "typescript": "^5.8.3",
       },
     },
     "packages/core": {
       "name": "m4k",
-      "version": "0.2.3",
+      "version": "0.2.4",
       "dependencies": {
-        "@m4k/common": "workspace:^0.2.2",
+        "@m4k/common": "workspace:^0.2.3",
       },
       "devDependencies": {
         "@ffmpeg-installer/ffmpeg": "^1.1.0",
@@ -45,10 +45,11 @@
     },
     "packages/server": {
       "name": "@m4k/server",
-      "version": "0.2.3",
+      "version": "0.2.4",
       "dependencies": {
+        "@m4k/common": "workspace:^0.2.3",
         "@m4k/typebox": "workspace:^0.1.0",
-        "m4k": "workspace:^0.2.3",
+        "m4k": "workspace:^0.2.4",
       },
       "devDependencies": {
         "@sinclair/typebox": "^0.34.33",

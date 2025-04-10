@@ -1,6 +1,6 @@
 {
   "name": "@m4k/server",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "type": "module",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -31,8 +31,9 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@m4k/common": "workspace:^0.2.3",
     "@m4k/typebox": "workspace:^0.1.0",
-    "m4k": "workspace:^0.2.3"
+    "m4k": "workspace:^0.2.4"
   },
   "repository": "github:sv2dev/m4k"
 }
