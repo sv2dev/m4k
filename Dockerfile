@@ -3,7 +3,7 @@ WORKDIR /app
 
 FROM base AS build
 COPY . .
-RUN bun install && \
+RUN bun install --frozen-lockfile && \
     cd packages/server && \
     bun run build && \
     bun run build:docker
@@ -11,7 +11,7 @@ RUN bun install && \
 FROM base AS install
 ENV NODE_ENV=production
 COPY ./package.json bun.lock /app/
-RUN bun install sharp
+RUN bun install --no-save sharp
 
 FROM base AS prod
 ENV NODE_ENV=production \

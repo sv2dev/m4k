@@ -73,7 +73,7 @@ jobs:
           bun-version: 1.2.9
           registry-url: "https://registry.npmjs.org/"
       - run: |
-          bun install
+          bun install --frozen-lockfile
           bun run build
       - name: Publish package
         run: bun publish --access public
@@ -96,7 +96,7 @@ jobs:
           bun-version: 1.2.9
           registry-url: "https://registry.npmjs.org/"
       - run: |
-          bun install
+          bun install --frozen-lockfile
           bun run build
       - name: Publish package
         run: bun publish --access public
@@ -120,7 +120,7 @@ jobs:
           bun-version: 1.2.9
           registry-url: "https://registry.npmjs.org/"
       - run: |
-          bun install
+          bun install --frozen-lockfile
           bun run build
       - name: Publish package
         run: bun publish --access public
@@ -144,7 +144,7 @@ jobs:
           bun-version: 1.2.9
           registry-url: "https://registry.npmjs.org/"
       - run: |
-          bun install
+          bun install --frozen-lockfile
           bun run build
       - name: Publish package
         run: bun publish --access public
@@ -168,7 +168,7 @@ jobs:
           bun-version: 1.2.9
           registry-url: "https://registry.npmjs.org/"
       - run: |
-          bun install
+          bun install --frozen-lockfile
           bun run build
       - name: Publish package
         run: bun publish --access public
