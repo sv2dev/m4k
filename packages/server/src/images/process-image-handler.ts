@@ -6,7 +6,7 @@ import { ProcessedFile, processImage } from "m4k";
 import { rm } from "node:fs/promises";
 import { parseOpts } from "../util/request-parsing";
 import { error, queueAndStream } from "../util/response";
-import { numberQueryParamSchema } from "../util/typebox";
+import { numberQueryParamSchema, parse } from "../util/typebox";
 
 const compiledOptionsSchema = TypeCompiler.Compile(imageOptionsSchema);
 
@@ -84,7 +84,7 @@ function queryToOptions(params: unknown): RemoteImageOptions {
     cropWidth,
     cropHeight,
     ...query
-  } = compiledQuerySchema.Decode(params);
+  } = parse(compiledQuerySchema, params);
   return {
     ...query,
     ...((width || height) && {
