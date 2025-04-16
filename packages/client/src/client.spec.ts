@@ -1,11 +1,11 @@
 import { ProcessedFile } from "@m4k/common";
 import serveOpts from "@m4k/server";
-import { describe, expect, it } from "bun:test";
-import { processAudio, processImage, processVideo, setFetch } from "./client";
+import { describe, expect, it, spyOn } from "bun:test";
+import { processAudio, processImage, processVideo } from "./client";
 
-setFetch(async (x) =>
-  serveOpts.fetch.call(serveOpts as any, new Request(x), null as any)
-);
+spyOn(global, "fetch").mockImplementation((async (x: RequestInfo) =>
+  serveOpts.fetch.call(serveOpts as any, new Request(x), null as any)) as any);
+spyOn(console, "warn").mockImplementation(() => {});
 
 describe("processAudio()", () => {
   it("should query the server to process an audio file", async () => {

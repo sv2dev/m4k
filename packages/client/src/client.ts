@@ -9,12 +9,6 @@ import {
 } from "@m4k/common";
 import { iterableToStream, streamParts } from "@sv2dev/multipart-stream";
 
-let f = fetch;
-
-export function setFetch(ftch: typeof fetch) {
-  f = ftch;
-}
-
 /**
  * Process an audio file.
  * @param host - The host of the server.
@@ -73,7 +67,7 @@ async function* runFetch(
   { signal }: { signal?: AbortSignal } = {}
 ) {
   signal?.throwIfAborted();
-  const res = await f(
+  const res = await fetch(
     new Request(url, {
       method: "POST",
       body: inputToStream(input),
