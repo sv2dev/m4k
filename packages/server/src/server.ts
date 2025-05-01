@@ -1,4 +1,5 @@
 import type { ServeOptions, Server } from "bun";
+import { version } from "../package.json";
 import { processAudioHandler } from "./audio/process-audio-handler";
 import { processImageHandler } from "./images/process-image-handler";
 import { processVideoHandler } from "./videos/process-video-handler";
@@ -23,6 +24,9 @@ export const serveOpts: ServeOptions = {
 };
 
 const routes = {
+  GET: {
+    "/info": () => Response.json({ version, service: "m4k" }),
+  },
   POST: {
     "/audio/process": processAudioHandler,
     "/images/process": processImageHandler,
