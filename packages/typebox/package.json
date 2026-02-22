@@ -12,8 +12,7 @@
     "dev": "bun --watch src/index.ts",
     "prepublishOnly": "bun run build",
     "build": "tsc -b",
-    "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@sinclair/typebox": "^0.34.33"
