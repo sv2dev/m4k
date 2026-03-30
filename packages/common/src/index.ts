@@ -154,3 +154,5 @@ export class ProcessedFile {
     readonly stream?: AsyncIterable<Uint8Array>
   ) {}
 }
+
+export { mimeTypes } from "./mime";
