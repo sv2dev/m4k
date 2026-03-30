@@ -38,7 +38,7 @@ const routes = {
     Partial<
       Record<
         string,
-        (req: Request, server: Server) => Promise<Response> | Response
+        (req: Request, server: Server<unknown>) => Promise<Response> | Response
       >
     >
   >
