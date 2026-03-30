@@ -22,13 +22,16 @@
     "test": "bun test"
   },
   "devDependencies": {
-    "@m4k/server": "workspace:^0.2.4",
+    "@m4k/server": "workspace:*",
     "@types/bun": "^1.3.11",
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "@m4k/common": "workspace:^0.2.3",
+    "@m4k/common": "workspace:*",
     "@sv2dev/multipart-stream": "^0.2.0"
   },
-  "repository": "github:sv2dev/m4k"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sv2dev/m4k.git"
+  }
 }

@@ -75,30 +75,31 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.11
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
+          node-version: 24
           registry-url: "https://registry.npmjs.org/"
       - run: bun install --frozen-lockfile && bun run build
       - name: Pack and publish @m4k/common
         if: needs.check-version.outputs.common-changed == 'true'
         working-directory: ./packages/common
-        run: bun pack && npm publish *.tgz --provenance --access public
+        run: bun pm pack && npm publish *.tgz --provenance --access public
       - name: Pack and publish @m4k/typebox
         if: needs.check-version.outputs.typebox-changed == 'true'
         working-directory: ./packages/typebox
-        run: bun pack && npm publish *.tgz --provenance --access public
+        run: bun pm pack && npm publish *.tgz --provenance --access public
       - name: Pack and publish m4k (core)
         if: needs.check-version.outputs.core-changed == 'true'
         working-directory: ./packages/core
-        run: bun pack && npm publish *.tgz --provenance --access public
+        run: bun pm pack && npm publish *.tgz --provenance --access public
       - name: Pack and publish @m4k/client
         if: needs.check-version.outputs.client-changed == 'true'
         working-directory: ./packages/client
-        run: bun pack && npm publish *.tgz --provenance --access public
+        run: bun pm pack && npm publish *.tgz --provenance --access public
       - name: Pack and publish @m4k/server
         if: needs.check-version.outputs.server-changed == 'true'
         working-directory: ./packages/server
-        run: bun pack && npm publish *.tgz --provenance --access public
+        run: bun pm pack && npm publish *.tgz --provenance --access public
 
   push-docker-image:
     name: Build and push docker image

@@ -1,6 +1,6 @@
 {
   "name": "@m4k/common",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "type": "module",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -16,5 +16,8 @@
   "devDependencies": {
     "typescript": "^5.8.3"
   },
-  "repository": "github:sv2dev/m4k"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sv2dev/m4k.git"
+  }
 }

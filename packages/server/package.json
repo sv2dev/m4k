@@ -31,9 +31,9 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "@m4k/common": "workspace:^0.2.3",
-    "@m4k/typebox": "workspace:^0.1.0",
-    "m4k": "workspace:^0.2.4"
+    "@m4k/common": "workspace:*",
+    "@m4k/typebox": "workspace:*",
+    "m4k": "workspace:*"
   },
   "repository": "github:sv2dev/m4k"
 }

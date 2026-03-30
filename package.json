@@ -17,5 +17,9 @@
   "workspaces": [
     "packages/*"
   ],
-  "repository": "github:sv2dev/m4k"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sv2dev/m4k.git"
+  },
+  "version": "0.0.0"
 }
