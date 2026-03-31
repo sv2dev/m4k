@@ -4,8 +4,8 @@ import { TypeCompiler } from "@sinclair/typebox/compiler";
 import { ProcessedFile, processAudio } from "m4k";
 import { rm } from "node:fs/promises";
 import { basename } from "node:path";
-import { parseOpts } from "../util/request-parsing";
-import { error, queueAndStream } from "../util/response";
+import { parseOpts } from "../util/request-parsing.js";
+import { error, queueAndStream } from "../util/response.js";
 
 const compiledOptionsSchema = TypeCompiler.Compile(audioOptionsSchema);
 

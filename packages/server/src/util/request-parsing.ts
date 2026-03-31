@@ -1,6 +1,6 @@
 import type { StaticDecode, TSchema } from "@sinclair/typebox";
 import type { TypeCheck } from "@sinclair/typebox/compiler";
-import { parse } from "./typebox";
+import { parse } from "./typebox.js";
 
 export function parseOpts<TOptions extends TSchema>(
   request: Request,

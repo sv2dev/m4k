@@ -1,7 +1,7 @@
 import { type AudioOptions } from "@m4k/common";
 import { mkdir } from "node:fs/promises";
 import { createQueue } from "tasque";
-import { getExtension, processFfmpeg } from "../util/ffmpeg-processor";
+import { getExtension, processFfmpeg } from "../util/ffmpeg-processor.js";
 
 /**
  * Process an audio file.

@@ -1,8 +1,8 @@
 import type { ServeOptions, Server } from "bun";
 import { version } from "../package.json";
-import { processAudioHandler } from "./audio/process-audio-handler";
-import { processImageHandler } from "./images/process-image-handler";
-import { processVideoHandler } from "./videos/process-video-handler";
+import { processAudioHandler } from "./audio/process-audio-handler.js";
+import { processImageHandler } from "./images/process-image-handler.js";
+import { processVideoHandler } from "./videos/process-video-handler.js";
 
 export const serveOpts: ServeOptions = {
   maxRequestBodySize: 2 ** 40, // 1TB

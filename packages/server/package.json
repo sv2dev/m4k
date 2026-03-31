@@ -1,10 +1,16 @@
 {
   "name": "@m4k/server",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "type": "module",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "module": "./lib/index.js",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js"
+    }
+  },
   "license": "MIT",
   "description": "Server for m4k",
   "keywords": [

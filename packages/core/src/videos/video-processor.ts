@@ -1,7 +1,7 @@
 import { type VideoOptions } from "@m4k/common";
 import { mkdir } from "node:fs/promises";
 import { createQueue } from "tasque";
-import { getExtension, processFfmpeg } from "../util/ffmpeg-processor";
+import { getExtension, processFfmpeg } from "../util/ffmpeg-processor.js";
 /**
  * Process a video.
  * @param input - The input video. Can be a file path, a stream or a blob.
