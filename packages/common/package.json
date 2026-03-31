@@ -1,10 +1,16 @@
 {
   "name": "@m4k/common",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "type": "module",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "module": "./lib/index.js",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js"
+    }
+  },
   "license": "MIT",
   "description": "Common types and utilities for m4k",
   "author": "sv2dev",

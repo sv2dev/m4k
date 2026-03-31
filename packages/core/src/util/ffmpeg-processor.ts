@@ -4,8 +4,8 @@ import { getRandomValues } from "node:crypto";
 import { createWriteStream } from "node:fs";
 import { rm } from "node:fs/promises";
 import { type Tasque } from "tasque";
-import { mimeTypes } from "../util/mime";
-import { exhaustAsyncIterableToWritable } from "../util/streams";
+import { mimeTypes } from "../util/mime.js";
+import { exhaustAsyncIterableToWritable } from "../util/streams.js";
 
 /**
  * Process a video.

@@ -4,9 +4,9 @@ import { Type as T } from "@sinclair/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
 import { ProcessedFile, processImage } from "m4k";
 import { rm } from "node:fs/promises";
-import { parseOpts } from "../util/request-parsing";
-import { error, queueAndStream } from "../util/response";
-import { numberQueryParamSchema, parse } from "../util/typebox";
+import { parseOpts } from "../util/request-parsing.js";
+import { error, queueAndStream } from "../util/response.js";
+import { numberQueryParamSchema, parse } from "../util/typebox.js";
 
 const compiledOptionsSchema = TypeCompiler.Compile(imageOptionsSchema);
 

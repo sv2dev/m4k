@@ -1,6 +1,6 @@
 import { ProcessedFile } from "m4k";
 import { basename } from "node:path";
-import { BOUNDARY, MultipartMixed } from "./multipart-mixed";
+import { BOUNDARY, MultipartMixed } from "./multipart-mixed.js";
 
 export function error(status: number, message: string) {
   return new Response(message, { status });

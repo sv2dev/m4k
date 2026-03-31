@@ -1,4 +1,4 @@
-import { serveOpts } from "./server";
+import { serveOpts } from "./server.js";
 
 export default {
   ...serveOpts,

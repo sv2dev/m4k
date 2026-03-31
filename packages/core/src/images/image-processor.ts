@@ -2,7 +2,7 @@ import { type ImageOptions, ProcessedFile } from "@m4k/common";
 import { createReadStream } from "node:fs";
 import sharp from "sharp";
 import { createQueue } from "tasque";
-import { exhaustAsyncIterableToWritable } from "../util/streams";
+import { exhaustAsyncIterableToWritable } from "../util/streams.js";
 
 export type Format = Required<ImageOptions>["format"];
 export type Fit = Required<Required<ImageOptions>["resize"]>["fit"];

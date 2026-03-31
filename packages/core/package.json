@@ -1,10 +1,16 @@
 {
   "name": "m4k",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "type": "module",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "module": "./lib/index.js",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js"
+    }
+  },
   "license": "MIT",
   "description": "Media toolkit for node, bun, and deno",
   "keywords": [

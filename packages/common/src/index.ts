@@ -155,4 +155,4 @@ export class ProcessedFile {
   ) {}
 }
 
-export { mimeTypes } from "./mime";
+export { mimeTypes } from "./mime.js";
