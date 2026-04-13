@@ -1,29 +1,29 @@
 {
   "name": "@m4k/common",
-  "version": "0.2.5",
+  "version": "0.2.6",
+  "description": "Common types and utilities for m4k",
+  "license": "MIT",
+  "author": "sv2dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sv2dev/m4k.git"
+  },
   "type": "module",
   "main": "./lib/index.js",
-  "types": "./lib/index.d.ts",
   "module": "./lib/index.js",
+  "types": "./lib/index.d.ts",
   "exports": {
     ".": {
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     }
   },
-  "license": "MIT",
-  "description": "Common types and utilities for m4k",
-  "author": "sv2dev",
   "scripts": {
     "prepublishOnly": "bun run build",
     "build": "tsc -b",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "typescript": "^5.8.3"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/sv2dev/m4k.git"
+    "typescript": "^6.0.2"
   }
 }
