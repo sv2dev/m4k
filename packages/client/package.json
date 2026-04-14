@@ -1,6 +1,6 @@
 {
   "name": "@m4k/client",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "Client for m4k server",
   "keywords": [
     "audio",
