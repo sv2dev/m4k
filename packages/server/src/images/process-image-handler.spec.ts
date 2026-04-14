@@ -9,6 +9,7 @@ import { describe, expect, it } from "bun:test";
 import { processImageHandler } from "./process-image-handler";
 
 const fixture = Bun.file("../../fixtures/image.jpeg");
+const avifFixture = Bun.file("../../fixtures/image.avif");
 
 describe("/process", () => {
   it("should process a single image", async () => {
@@ -143,6 +144,29 @@ describe("/process", () => {
       { filename: "file1.avif", type: "image/avif", size: 437 },
       { progress: 50 },
       { filename: "file2.webp", type: "image/webp", size: 204 },
+      { progress: 100 },
+    ]);
+  });
+
+  it("should convert avif to avif", async () => {
+    const opts: RemoteImageOptions = {
+      format: "avif",
+    };
+    const response = await processImageHandler(
+      new Request(`http://localhost:3000/images/process`, {
+        method: "POST",
+        body: avifFixture,
+        headers: { "X-Options": JSON.stringify(opts) },
+      })
+    );
+
+    expect(response.status).toBe(200);
+    const collected = await collectResponse(response);
+
+    expect(collected).toEqual([
+      { position: 0 },
+      { progress: 0 },
+      expect.objectContaining({ filename: "file1.avif", type: "image/avif" }),
       { progress: 100 },
     ]);
   });
