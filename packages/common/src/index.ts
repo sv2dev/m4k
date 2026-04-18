@@ -156,3 +156,18 @@ export class ProcessedFile {
 }
 
 export { mimeTypes } from "./mime.js";
+
+export function isImageNoOp(opt: ImageOptions, inputExt: string): boolean {
+  const outFmt = opt.format ?? opt.ext ?? "avif";
+  if (outFmt !== inputExt) return false;
+  return (
+    !opt.resize &&
+    !opt.crop &&
+    opt.rotate == null &&
+    opt.quality == null &&
+    !opt.colorspace &&
+    !opt.keepExif &&
+    !opt.keepIcc &&
+    !opt.keepMetadata
+  );
+}

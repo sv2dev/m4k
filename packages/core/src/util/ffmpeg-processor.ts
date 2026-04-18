@@ -152,8 +152,10 @@ function durationToMs(duration: string) {
   return (((hours * 60 + minutes) * 60 + seconds) * 100 + centiseconds) * 10;
 }
 
-const ffmpeg =
+export const ffmpeg =
   process.env.FFMPEG_PATH ?? (await import("@ffmpeg-installer/ffmpeg")).path;
+
+export { createTmp, randomId };
 
 const extMap: Record<string, string> = {
   matroska: "mkv",

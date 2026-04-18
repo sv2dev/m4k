@@ -1,5 +1,6 @@
 import {
   ProcessedFile,
+  isImageNoOp,
   type ProcessingError,
   type Progress,
   type QueuePosition,
@@ -40,8 +41,26 @@ export async function* processImage(
   opts: RemoteImageOptions | RemoteImageOptions[],
   { signal }: { signal?: AbortSignal } = {}
 ) {
+  if (input instanceof Blob && input.type) {
+    const optsArr = Array.isArray(opts) ? opts : [opts];
+    const inputExt = input.type.replace(/^image\//, "").toLowerCase();
+    if (optsArr.every((o) => isImageNoOp(o, inputExt))) {
+      yield { progress: 0 } as Progress;
+      for (let i = 0; i < optsArr.length; i++) {
+        const ext = optsArr[i].ext ?? optsArr[i].format ?? inputExt;
+        yield new ProcessedFile(
+          optsArr[i].name ?? `file${i + 1}.${ext}`,
+          `image/${ext}`,
+          input.stream() as unknown as AsyncIterable<Uint8Array>
+        ) as ProcessedFile & { stream: AsyncIterable<Uint8Array> };
+        yield { progress: Math.round(((i + 1) / optsArr.length) * 100) } as Progress;
+      }
+      return;
+    }
+  }
   yield* runFetch(`${host}/images/process`, input, opts, { signal });
 }
+
 
 /**
  * Process a video.
