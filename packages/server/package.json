@@ -28,7 +28,7 @@
     "dev": "bun --watch src/index.ts",
     "prepublishOnly": "bun run build",
     "build": "tsc -b",
-    "build:docker": "bun build ./src/index.ts --outfile dist/server/app.js --target bun",
+    "build:docker": "bun build ./src/index.ts --outfile dist/server/app.js --target bun --external sharp",
     "typecheck": "tsc --noEmit",
     "test": "bun test"
   },
@@ -40,7 +40,7 @@
   },
   "devDependencies": {
     "@sinclair/typebox": "^0.34.52",
-    "bun-types": "^1.4.0",
+    "bun-types": "^1.4.4",
     "typescript": "^7.0.2"
   }
 }

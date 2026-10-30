@@ -1,4 +1,4 @@
-FROM oven/bun:1.4.0-slim AS base
+FROM oven/bun:1.4.4-slim AS base
 WORKDIR /app
 
 FROM base AS build
@@ -11,7 +11,8 @@ RUN bun install --frozen-lockfile && \
 FROM base AS install
 ENV NODE_ENV=production
 COPY ./package.json bun.lock /app/
-RUN bun install --no-save sharp
+COPY ./packages /app/packages
+RUN bun install --frozen-lockfile --production
 
 FROM base AS prod
 ENV NODE_ENV=production \
