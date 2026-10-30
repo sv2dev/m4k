@@ -1,6 +1,6 @@
 {
   "name": "m4k",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "Media toolkit for node, bun, and deno",
   "keywords": [
     "audio",
