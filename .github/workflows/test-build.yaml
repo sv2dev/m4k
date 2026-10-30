@@ -8,10 +8,16 @@ jobs:
   test:
     name: Run all tests
     runs-on: ubuntu-latest
-    container: oven/bun:1.4.0
+    container: oven/bun:1.4.4
     steps:
       - uses: actions/checkout@v4
       - run: bun install --frozen-lockfile
       - run: bun run build
       - run: bun run typecheck
       - run: bun run test
+  container-smoke:
+    name: Test production container
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/container-smoke.sh
