@@ -7,6 +7,8 @@ import { createQueue } from "tasque";
 import { ffmpeg, createTmp, randomId } from "../util/ffmpeg-processor.js";
 import { exhaustAsyncIterableToWritable } from "../util/streams.js";
 
+import { extractEmbeddedPreview } from "./extract-embedded-preview.js";
+
 export { ffmpeg };
 
 export type Format = Required<ImageOptions>["format"];
@@ -24,11 +26,21 @@ const imageTmpDir = `${process.env.M4K_TMP_DIR ?? "/tmp/m4k"}/image`;
 export function processImage(
   input: string | AsyncIterable<Uint8Array> | Blob,
   opts: ImageOptions | ImageOptions[],
-  { signal }: { signal?: AbortSignal } = {}
+  { signal }: { signal?: AbortSignal } = {},
 ) {
   const iterable = imageQueue.iterate(async function* () {
     const optsArr = Array.isArray(opts) ? opts : [opts];
-    const resolvedInput = await resolveInput(input);
+    const preview = optsArr.some((o) => o.embeddedPreview);
+    if (
+      preview &&
+      optsArr.some((o) => !o.embeddedPreview || o.keepMetadata || o.keepExif || o.keepIcc)
+    )
+      throw new RangeError(
+        "Embedded previews require metadata stripping and cannot mix input modes",
+      );
+    const resolvedInput = preview
+      ? await extractEmbeddedPreview(await boundedInput(input))
+      : await resolveInput(input);
     const inputExt = detectExt(resolvedInput);
 
     if (inputExt != null && optsArr.every((o) => isImageNoOp(o, inputExt))) {
@@ -75,7 +87,7 @@ export const imageQueue = createQueue({
 
 async function runSharp(
   input: string | Buffer | Blob,
-  opts: ImageOptions[]
+  opts: ImageOptions[],
 ): Promise<ProcessedFile[]> {
   const sharpInstance = sharp();
   void exhaustAsyncIterableToWritable(toSharpInput(input), sharpInstance);
@@ -94,7 +106,7 @@ async function runSharp(
           resize,
           rotate,
         },
-        idx
+        idx,
       ) => {
         let s = sharpInstance.clone();
         s = s.rotate(rotate);
@@ -117,8 +129,8 @@ async function runSharp(
         s = s.toFormat(ext, { quality });
         const buf = await s.toBuffer();
         return new ProcessedFile(`file${idx + 1}.${ext}`, `image/${ext}`, toAsyncIterable(buf));
-      }
-    )
+      },
+    ),
   );
 }
 
@@ -130,14 +142,24 @@ async function ffmpegDecodeToPng(input: string | Buffer | Blob): Promise<Buffer>
   const inputPath =
     typeof input === "string"
       ? input
-      : await createTmp(imageTmpDir, id, input instanceof Buffer ? toAsyncIterable(input) : (input as Blob));
+      : await createTmp(
+          imageTmpDir,
+          id,
+          input instanceof Buffer ? toAsyncIterable(input) : (input as Blob),
+        );
   try {
     await new Promise<void>((resolve, reject) => {
-      const child = spawn(ffmpeg, ["-y", "-i", inputPath, "-update", "1", "-frames:v", "1", outPath], {
-        stdio: ["pipe", "pipe", "pipe"],
-      });
+      const child = spawn(
+        ffmpeg,
+        ["-y", "-i", inputPath, "-update", "1", "-frames:v", "1", outPath],
+        {
+          stdio: ["pipe", "pipe", "pipe"],
+        },
+      );
       let errStr = "";
-      child.stderr!.on("data", (chunk: Buffer) => { errStr += chunk.toString(); });
+      child.stderr!.on("data", (chunk: Buffer) => {
+        errStr += chunk.toString();
+      });
       child.on("close", (code) => {
         if (code !== 0) reject(new Error(`ffmpeg exited with code ${code}: ${errStr}`));
         else resolve();
@@ -150,8 +172,25 @@ async function ffmpegDecodeToPng(input: string | Buffer | Blob): Promise<Buffer>
   }
 }
 
+async function boundedInput(input: string | AsyncIterable<Uint8Array> | Blob): Promise<Buffer> {
+  const iterable =
+    typeof input === "string"
+      ? createReadStream(input)
+      : "stream" in input
+        ? input.stream()
+        : input;
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for await (const chunk of iterable) {
+    size += chunk.length;
+    if (size > 128 * 1024 * 1024) throw new RangeError("RAW preview input exceeds 128 MiB");
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks);
+}
+
 async function resolveInput(
-  input: string | AsyncIterable<Uint8Array> | Blob
+  input: string | AsyncIterable<Uint8Array> | Blob,
 ): Promise<string | Buffer | Blob> {
   if (typeof input === "string" || "stream" in input) return input as string | Blob;
   const chunks: Uint8Array[] = [];
@@ -190,17 +229,27 @@ function detectExt(input: string | Buffer | Blob): string | null {
   }
   if (input instanceof Buffer && input.byteLength >= 12) {
     if (input[0] === 0xff && input[1] === 0xd8) return "jpeg";
-    if (input[0] === 0x89 && input[1] === 0x50 && input[2] === 0x4e && input[3] === 0x47) return "png";
+    if (input[0] === 0x89 && input[1] === 0x50 && input[2] === 0x4e && input[3] === 0x47)
+      return "png";
     if (input[0] === 0x47 && input[1] === 0x49 && input[2] === 0x46) return "gif";
-    if (input[0] === 0x52 && input[1] === 0x49 && input[2] === 0x46 && input[3] === 0x46 &&
-        input[8] === 0x57 && input[9] === 0x45 && input[10] === 0x42 && input[11] === 0x50) return "webp";
+    if (
+      input[0] === 0x52 &&
+      input[1] === 0x49 &&
+      input[2] === 0x46 &&
+      input[3] === 0x46 &&
+      input[8] === 0x57 &&
+      input[9] === 0x45 &&
+      input[10] === 0x42 &&
+      input[11] === 0x50
+    )
+      return "webp";
     // AVIF/HEIF: ftyp box at offset 4, brand at offset 8
     if (input[4] === 0x66 && input[5] === 0x74 && input[6] === 0x79 && input[7] === 0x70) {
       const brand = input.slice(8, 12).toString("ascii");
       if (brand.startsWith("avif") || brand.startsWith("avis")) return "avif";
-      if (brand.startsWith("heic") || brand.startsWith("heix") || brand.startsWith("mif1")) return "heif";
+      if (brand.startsWith("heic") || brand.startsWith("heix") || brand.startsWith("mif1"))
+        return "heif";
     }
   }
   return null;
 }
-

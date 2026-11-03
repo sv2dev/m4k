@@ -1,11 +1,21 @@
 import { ProcessedFile } from "@m4k/common";
 import serveOpts from "@m4k/server";
-import { describe, expect, it, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { processAudio, processImage, processVideo } from "./client";
 
-spyOn(global, "fetch").mockImplementation((async (x: RequestInfo) =>
-  serveOpts.fetch.call(serveOpts as any, new Request(x), null as any)) as any);
-spyOn(console, "warn").mockImplementation(() => {});
+let restoreMocks = () => {};
+beforeEach(() => {
+  const fetchSpy = spyOn(global, "fetch").mockImplementation((async (
+    x: RequestInfo,
+    init?: RequestInit,
+  ) => serveOpts.fetch.call(serveOpts as any, new Request(x, init), null as any)) as any);
+  const warnSpy = spyOn(console, "warn").mockImplementation(() => {});
+  restoreMocks = () => {
+    fetchSpy.mockRestore();
+    warnSpy.mockRestore();
+  };
+});
+afterEach(() => restoreMocks());
 
 describe("processAudio()", () => {
   it("should query the server to process an audio file", async () => {
@@ -25,9 +35,7 @@ describe("processAudio()", () => {
       }
     }
 
-    expect(files).toEqual([
-      { name: "audio.mp3", type: "audio/mpeg", size: 52288 },
-    ]);
+    expect(files).toEqual([{ name: "audio.mp3", type: "audio/mpeg", size: 52288 }]);
   });
 });
 
@@ -75,21 +83,16 @@ describe("processVideo()", () => {
       }
     }
 
-    expect(files).toEqual([
-      { name: "video.mp4", type: "video/mp4", size: expect.any(Number) },
-    ]);
+    expect(files).toEqual([{ name: "video.mp4", type: "video/mp4", size: expect.any(Number) }]);
   });
 
   it("should immediately throw an error if the signal is already aborted", async () => {
     const video = Bun.file("../../fixtures/video.mp4");
     try {
       await Array.fromAsync(
-        processVideo(
-          "http://localhost:3000",
-          video,
-          [{ format: "mp4", name: "video.mp4" }],
-          { signal: AbortSignal.abort() }
-        )
+        processVideo("http://localhost:3000", video, [{ format: "mp4", name: "video.mp4" }], {
+          signal: AbortSignal.abort(),
+        }),
       );
       throw new Error("should not get here");
     } catch (e) {
@@ -105,7 +108,7 @@ describe("processVideo()", () => {
         "http://localhost:3000",
         video,
         [{ ext: "mp4", name: "video.mp4", videoCodec: "copy" }],
-        { signal: AbortSignal.timeout(0) }
+        { signal: AbortSignal.timeout(0) },
       )) {
       }
       throw new Error("should not get here");

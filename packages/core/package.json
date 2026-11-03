@@ -33,6 +33,7 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@huggingface/transformers": "3.8.1",
     "@m4k/common": "workspace:^"
   },
   "devDependencies": {

@@ -1,6 +1,7 @@
 import {
   ProcessedFile,
   isImageNoOp,
+  encodeOptions,
   type ProcessingError,
   type Progress,
   type QueuePosition,
@@ -8,6 +9,7 @@ import {
   type RemoteImageOptions,
   type RemoteVideoOptions,
 } from "@m4k/common";
+import { readJsonResponse } from "./read-json-response.js";
 import { iterableToStream, streamParts } from "@sv2dev/multipart-stream";
 
 /**
@@ -22,7 +24,7 @@ export async function* processAudio(
   host: string,
   input: AsyncIterable<Uint8Array> | Blob,
   opts: RemoteAudioOptions | RemoteAudioOptions[],
-  { signal }: { signal?: AbortSignal } = {}
+  { signal }: { signal?: AbortSignal } = {},
 ) {
   yield* runFetch(`${host}/audio/process`, input, opts, { signal });
 }
@@ -39,10 +41,27 @@ export async function* processImage(
   host: string,
   input: AsyncIterable<Uint8Array> | Blob,
   opts: RemoteImageOptions | RemoteImageOptions[],
-  { signal }: { signal?: AbortSignal } = {}
+  { signal }: { signal?: AbortSignal } = {},
 ) {
+  const optsArr = Array.isArray(opts) ? opts : [opts];
+  if (optsArr.some((option) => option.embeddedPreview)) {
+    const response = await fetch(`${host}/info`, {
+      ...(signal ? { signal } : {}),
+      redirect: "error",
+    });
+    if (!response.ok) throw new Error("M4K preview capability check failed");
+    const info = (await readJsonResponse(response)) as {
+      service?: string;
+      imageProfiles?: string[];
+    };
+    if (
+      info.service !== "m4k" ||
+      !Array.isArray(info.imageProfiles) ||
+      !info.imageProfiles.includes("embedded-preview/1")
+    )
+      throw new RangeError("M4K does not support embedded preview extraction");
+  }
   if (input instanceof Blob && input.type) {
-    const optsArr = Array.isArray(opts) ? opts : [opts];
     const inputExt = input.type.replace(/^image\//, "").toLowerCase();
     if (optsArr.every((o) => isImageNoOp(o, inputExt))) {
       yield { progress: 0 } as Progress;
@@ -51,7 +70,7 @@ export async function* processImage(
         yield new ProcessedFile(
           optsArr[i].name ?? `file${i + 1}.${ext}`,
           `image/${ext}`,
-          input.stream() as unknown as AsyncIterable<Uint8Array>
+          input.stream() as unknown as AsyncIterable<Uint8Array>,
         ) as ProcessedFile & { stream: AsyncIterable<Uint8Array> };
         yield { progress: Math.round(((i + 1) / optsArr.length) * 100) } as Progress;
       }
@@ -60,7 +79,6 @@ export async function* processImage(
   }
   yield* runFetch(`${host}/images/process`, input, opts, { signal });
 }
-
 
 /**
  * Process a video.
@@ -74,7 +92,7 @@ export async function* processVideo(
   host: string,
   input: AsyncIterable<Uint8Array> | Blob,
   opts: RemoteVideoOptions | RemoteVideoOptions[],
-  { signal }: { signal?: AbortSignal } = {}
+  { signal }: { signal?: AbortSignal } = {},
 ) {
   yield* runFetch(`${host}/videos/process`, input, opts, { signal });
 }
@@ -83,39 +101,34 @@ async function* runFetch(
   url: string,
   input: AsyncIterable<Uint8Array> | Blob,
   opts: any,
-  { signal }: { signal?: AbortSignal } = {}
+  { signal }: { signal?: AbortSignal } = {},
 ) {
   signal?.throwIfAborted();
+  const preview = (Array.isArray(opts) ? opts : [opts]).some(
+    (option) => option.embeddedPreview === true,
+  );
   const res = await fetch(
     new Request(url, {
+      redirect: preview ? "error" : "follow",
       method: "POST",
       body: inputToStream(input),
-      headers: { "X-Options": JSON.stringify(opts) },
+      headers: { "X-Options": encodeOptions(opts) },
       signal,
-    })
+    }),
   );
   if (!res.ok) {
-    throw new Error(
-      `Failed to optimize: [${res.statusText}] ${await res.text()}`
-    );
+    throw new Error(`Failed to optimize: [${res.statusText}] ${await res.text()}`);
   }
   for await (const part of streamParts(res)) {
     if (part.type === "application/json") {
-      const msg = (await part.json()) as
-        | Progress
-        | QueuePosition
-        | ProcessingError;
+      const msg = (await part.json()) as Progress | QueuePosition | ProcessingError;
       if ("error" in msg) {
         signal?.throwIfAborted();
         throw new Error(msg.error);
       }
       yield msg;
     } else if (part.type !== "text/plain") {
-      yield new ProcessedFile(
-        part.filename!,
-        part.type!,
-        part
-      ) as ProcessedFile & {
+      yield new ProcessedFile(part.filename!, part.type!, part) as ProcessedFile & {
         stream: AsyncIterable<Uint8Array>;
       };
     }

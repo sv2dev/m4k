@@ -5,9 +5,10 @@ export {
   type ProcessingError,
   type Progress,
   type QueuePosition,
-  type VideoOptions
+  type VideoOptions,
 } from "@m4k/common";
 export { audioQueue, processAudio } from "./audio/audio-processor.js";
+export { classifyImage } from "./images/classify-image.js";
 export { imageQueue, processImage } from "./images/image-processor.js";
 export { getExtension } from "./util/ffmpeg-processor.js";
 export { mimeTypes } from "./util/mime.js";

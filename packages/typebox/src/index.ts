@@ -30,6 +30,7 @@ const imageFormat = T.Union([
   T.Literal("jp2"),
 ]);
 export const imageOptionsSchema = T.Object({
+  embeddedPreview: T.Optional(T.Boolean()),
   rotate: T.Optional(T.Number()),
   resize: T.Optional(
     T.Object({
@@ -42,9 +43,9 @@ export const imageOptionsSchema = T.Object({
           T.Literal("fill"),
           T.Literal("inside"),
           T.Literal("outside"),
-        ])
+        ]),
       ),
-    })
+    }),
   ),
   ext: T.Optional(imageFormat),
   format: T.Optional(imageFormat),
@@ -59,7 +60,7 @@ export const imageOptionsSchema = T.Object({
       top: T.Optional(T.Number()),
       width: T.Number(),
       height: T.Number(),
-    })
+    }),
   ),
   args: T.Optional(T.Array(T.String())),
   name: T.Optional(T.String()),
