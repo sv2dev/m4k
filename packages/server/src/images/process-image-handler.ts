@@ -49,11 +49,12 @@ export async function processImageHandler(request: Request) {
           yield value;
         }
       }
-    })()
+    })(),
   );
 }
 
 const querySchema = T.Object({
+  embeddedPreview: T.Optional(T.Boolean()),
   rotate: T.Optional(numberQueryParamSchema),
   width: T.Optional(numberQueryParamSchema),
   height: T.Optional(numberQueryParamSchema),
@@ -75,16 +76,10 @@ const querySchema = T.Object({
 const compiledQuerySchema = TypeCompiler.Compile(querySchema);
 
 function queryToOptions(params: unknown): RemoteImageOptions {
-  const {
-    width,
-    height,
-    fit,
-    cropLeft,
-    cropTop,
-    cropWidth,
-    cropHeight,
-    ...query
-  } = parse(compiledQuerySchema, params);
+  const { width, height, fit, cropLeft, cropTop, cropWidth, cropHeight, ...query } = parse(
+    compiledQuerySchema,
+    params,
+  );
   return {
     ...query,
     ...((width || height) && {

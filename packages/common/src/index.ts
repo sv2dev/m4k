@@ -1,3 +1,11 @@
+export {
+  imageClassifier,
+  encodeOptions,
+  validateClassificationOptions,
+  type ClassificationOptions,
+  type ClassificationResult,
+} from "./classification.js";
+
 export type Progress = {
   progress: number;
 };
@@ -26,6 +34,8 @@ type ImageFormat =
   | "jp2";
 
 export type ImageOptions = {
+  /** Extract a bounded embedded JPEG preview from a TIFF-based camera file; never demosaic RAW. */
+  embeddedPreview?: boolean;
   /** The rotation of the image. If not provided, the image will be auto-rotated, according to the EXIF data. To disable auto-rotation, set to `0`. */
   rotate?: number;
   /** Resizing options. */
@@ -151,7 +161,7 @@ export class ProcessedFile {
   constructor(
     readonly name: string,
     readonly type: string,
-    readonly stream?: AsyncIterable<Uint8Array>
+    readonly stream?: AsyncIterable<Uint8Array>,
   ) {}
 }
 
@@ -161,6 +171,7 @@ export function isImageNoOp(opt: ImageOptions, inputExt: string): boolean {
   const outFmt = opt.format ?? opt.ext ?? "avif";
   if (outFmt !== inputExt) return false;
   return (
+    !opt.embeddedPreview &&
     !opt.resize &&
     !opt.crop &&
     opt.rotate == null &&

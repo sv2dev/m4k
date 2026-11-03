@@ -28,7 +28,7 @@
     "dev": "bun --watch src/index.ts",
     "prepublishOnly": "bun run build",
     "build": "tsc -b",
-    "build:docker": "bun build ./src/index.ts --outfile dist/server/app.js --target bun --external sharp",
+    "build:docker": "bun build ./src/index.ts --outfile dist/server/app.js --target bun --external sharp --external @huggingface/transformers",
     "typecheck": "tsc --noEmit",
     "test": "bun test"
   },

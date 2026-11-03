@@ -1,5 +1,7 @@
 import type { ServeOptions, Server } from "bun";
 import { version } from "../package.json";
+import { imageClassifier } from "@m4k/common";
+import { classifyImageHandler } from "./images/classify-image-handler.js";
 import { processAudioHandler } from "./audio/process-audio-handler.js";
 import { processImageHandler } from "./images/process-image-handler.js";
 import { processVideoHandler } from "./videos/process-video-handler.js";
@@ -25,21 +27,23 @@ export const serveOpts: ServeOptions = {
 
 const routes = {
   GET: {
-    "/info": () => Response.json({ version, service: "m4k" }),
+    "/info": () =>
+      Response.json({
+        version,
+        service: "m4k",
+        classifiers: [imageClassifier],
+        imageProfiles: ["embedded-preview/1"],
+      }),
   },
   POST: {
     "/audio/process": processAudioHandler,
     "/images/process": processImageHandler,
+    "/images/classify": classifyImageHandler,
     "/videos/process": processVideoHandler,
   },
 } as Partial<
   Record<
     string,
-    Partial<
-      Record<
-        string,
-        (req: Request, server: Server<unknown>) => Promise<Response> | Response
-      >
-    >
+    Partial<Record<string, (req: Request, server: Server<unknown>) => Promise<Response> | Response>>
   >
 >;

@@ -1,7 +1,15 @@
 {
   "name": "m4k-workspaces",
+  "version": "0.0.0",
   "private": true,
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sv2dev/m4k.git"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "bun --filter @m4k/server dev",
     "test": "bun --filter '*' test",
@@ -11,18 +19,11 @@
     "typecheck": "bun --filter '*' typecheck"
   },
   "dependencies": {
+    "@huggingface/transformers": "3.8.1",
     "sharp": "^0.35.5"
   },
   "devDependencies": {
     "husky": "^9.1.7",
     "typescript": "^7.0.2"
-  },
-  "workspaces": [
-    "packages/*"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/sv2dev/m4k.git"
-  },
-  "version": "0.0.0"
+  }
 }
