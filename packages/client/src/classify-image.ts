@@ -59,7 +59,8 @@ export async function classifyImage(
         !Number.isFinite(entry.score) ||
         entry.score < 0 ||
         entry.score > 1,
-    )
+    ) ||
+    Math.abs(result.labels.reduce((sum, entry) => sum + entry.score, 0) - 1) > 1e-3
   )
     throw new Error("Invalid classification response");
   const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", await input.arrayBuffer()));

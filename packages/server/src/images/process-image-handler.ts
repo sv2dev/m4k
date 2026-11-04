@@ -6,7 +6,7 @@ import { ProcessedFile, processImage } from "m4k";
 import { rm } from "node:fs/promises";
 import { parseOpts } from "../util/request-parsing.js";
 import { error, queueAndStream } from "../util/response.js";
-import { numberQueryParamSchema, parse } from "../util/typebox.js";
+import { booleanQueryParamSchema, numberQueryParamSchema, parse } from "../util/typebox.js";
 
 const compiledOptionsSchema = TypeCompiler.Compile(imageOptionsSchema);
 
@@ -54,7 +54,7 @@ export async function processImageHandler(request: Request) {
 }
 
 const querySchema = T.Object({
-  embeddedPreview: T.Optional(T.Boolean()),
+  embeddedPreview: T.Optional(booleanQueryParamSchema),
   rotate: T.Optional(numberQueryParamSchema),
   width: T.Optional(numberQueryParamSchema),
   height: T.Optional(numberQueryParamSchema),

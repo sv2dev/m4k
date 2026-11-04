@@ -1,17 +1,66 @@
-import type {
-  ProcessingError,
-  Progress,
-  QueuePosition,
-  RemoteImageOptions,
-} from "@m4k/common";
+import type { ProcessingError, Progress, QueuePosition, RemoteImageOptions } from "@m4k/common";
 import { streamParts } from "@sv2dev/multipart-stream";
 import { describe, expect, it } from "bun:test";
+import sharp from "sharp";
+import { embeddedPreviewFixture } from "../../../../fixtures/embedded-preview.js";
 import { processImageHandler } from "./process-image-handler";
 
 const fixture = Bun.file("../../fixtures/image.jpeg");
 const avifFixture = Bun.file("../../fixtures/image.avif");
 
 describe("/process", () => {
+  it("decodes embeddedPreview=true from the URL query", async () => {
+    const jpeg = await sharp({ create: { width: 32, height: 16, channels: 3, background: "red" } })
+      .jpeg()
+      .toBuffer();
+    const input = embeddedPreviewFixture(jpeg);
+
+    const response = await processImageHandler(
+      new Request("http://m4k/images/process?embeddedPreview=true&format=jpeg", {
+        method: "POST",
+        body: input,
+      }),
+    );
+    const collected = await collectResponse(response);
+
+    expect(response.status).toBe(200);
+    expect(collected).toContainEqual(
+      expect.objectContaining({ filename: "file1.jpeg", type: "image/jpeg" }),
+    );
+    expect(collected.some((part) => "error" in part)).toBe(false);
+  });
+
+  it("decodes embeddedPreview=false without enabling RAW extraction", async () => {
+    const input = fixture;
+
+    const response = await processImageHandler(
+      new Request("http://m4k/images/process?embeddedPreview=false&format=jpeg", {
+        method: "POST",
+        body: input,
+      }),
+    );
+    const collected = await collectResponse(response);
+
+    expect(response.status).toBe(200);
+    expect(collected).toContainEqual(
+      expect.objectContaining({ filename: "file1.jpeg", type: "image/jpeg" }),
+    );
+    expect(collected.some((part) => "error" in part)).toBe(false);
+  });
+
+  it("rejects an invalid embeddedPreview query value", async () => {
+    const input = fixture;
+
+    const response = await processImageHandler(
+      new Request("http://m4k/images/process?embeddedPreview=maybe&format=jpeg", {
+        method: "POST",
+        body: input,
+      }),
+    );
+
+    expect(response.status).toBe(400);
+  });
+
   it("should process a single image", async () => {
     const opts: RemoteImageOptions = {
       resize: { width: 100, height: 1000 },
@@ -22,7 +71,7 @@ describe("/process", () => {
         method: "POST",
         body: fixture,
         headers: { "X-Options": JSON.stringify(opts) },
-      })
+      }),
     );
 
     expect(response.status).toBe(200);
@@ -46,14 +95,14 @@ describe("/process", () => {
         method: "POST",
         body: fixture,
         headers: { "X-Options": JSON.stringify(opts) },
-      })
+      }),
     );
     const r2 = processImageHandler(
       new Request(`http://localhost:3000/images/process`, {
         method: "POST",
         body: fixture,
         headers: { "X-Options": JSON.stringify(opts) },
-      })
+      }),
     );
 
     const collected1 = await collectResponse(await r1);
@@ -82,7 +131,7 @@ describe("/process", () => {
         method: "POST",
         body: fixture,
         headers: { "X-Options": JSON.stringify(opts) },
-      })
+      }),
     );
 
     expect(res.status).toBe(400);
@@ -94,7 +143,7 @@ describe("/process", () => {
       new Request(`http://localhost:3000/images/process`, {
         method: "POST",
         body: fixture,
-      })
+      }),
     );
 
     expect(res.status).toBe(400);
@@ -107,7 +156,7 @@ describe("/process", () => {
         method: "POST",
         body: fixture,
         headers: { "X-Options": "{" },
-      })
+      }),
     );
 
     expect(res.status).toBe(400);
@@ -132,7 +181,7 @@ describe("/process", () => {
         method: "POST",
         body: fixture,
         headers: { "X-Options": JSON.stringify(opts) },
-      })
+      }),
     );
 
     const collected = await collectResponse(response);
@@ -157,7 +206,7 @@ describe("/process", () => {
         method: "POST",
         body: avifFixture,
         headers: { "X-Options": JSON.stringify(opts) },
-      })
+      }),
     );
 
     expect(response.status).toBe(200);
@@ -182,7 +231,7 @@ describe("/process", () => {
         method: "POST",
         body: fixture,
         headers: { "X-Options": JSON.stringify(opts) },
-      })
+      }),
     );
 
     expect(response.status).toBe(200);
@@ -209,9 +258,7 @@ async function collectResponse(response: Response) {
   )[] = [];
   for await (const part of streamParts(response)) {
     if (part.type === "application/json") {
-      collected.push(
-        (await part.json()) as QueuePosition | Progress | ProcessingError
-      );
+      collected.push((await part.json()) as QueuePosition | Progress | ProcessingError);
     } else if (part.type === "text/plain") {
       continue; // keepalive
     } else {

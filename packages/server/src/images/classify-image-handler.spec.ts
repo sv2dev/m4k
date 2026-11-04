@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { runClassificationScenario } from "../../../../fixtures/run-classification-scenario.js";
 import { classifyImageHandler } from "./classify-image-handler.js";
 
 const config = {
@@ -14,6 +15,24 @@ const request = (options: unknown, body: Uint8Array = new Uint8Array([1])) =>
   });
 
 describe("classifyImageHandler", () => {
+  test("returns verified annotations after real JPEG decoding with only the model stubbed", async () => {
+    const scenario = "handler-success";
+
+    const result = await runClassificationScenario(scenario);
+
+    expect(result.status).toBe(200);
+    expect(result.body).toEqual({
+      classifierId: "clip-image-labels",
+      classifierVersion: "1",
+      sha256: result.expectedSha256,
+      labels: [
+        { label: "landscape", score: 0.5 },
+        { label: "receipt", score: 0.5 },
+      ],
+    });
+    expect(result.pixels).toEqual({ width: 32, height: 16, channels: 3, bytes: 1536 });
+  });
+
   test("refuses an unsupported classifier before inference", async () => {
     const input = request({ ...config, classifierId: "arbitrary-model" });
 
