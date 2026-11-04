@@ -7,6 +7,8 @@ import {
   type ClassificationResult,
 } from "@m4k/common";
 
+import { waitForLoad } from "../util/wait-for-load.js";
+
 let classifier: Promise<Awaited<ReturnType<typeof loadClassifier>>> | undefined;
 let busy = false;
 async function loadClassifier() {
@@ -59,7 +61,7 @@ export async function classifyImage(
       classifier = undefined;
       throw error;
     });
-    const run = await classifier;
+    const run = await waitForLoad(classifier, signal);
     signal?.throwIfAborted();
     const labels = await run(
       new RawImage(new Uint8ClampedArray(data), info.width, info.height, 3),

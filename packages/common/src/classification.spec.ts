@@ -16,6 +16,24 @@ describe("validateClassificationOptions", () => {
     expect(valid).toBe(true);
   });
 
+  test("accepts the eighty-character label boundary", () => {
+    const input = { ...config, labels: ["x".repeat(80), "receipt"] };
+
+    const valid = validateClassificationOptions(input);
+
+    expect(valid).toBe(true);
+  });
+
+  test("rejects whitespace, braces, controls and overlong labels", () => {
+    const invalid = [" leading", "trailing ", "{label}", "line\nbreak", "x".repeat(81)];
+
+    const valid = invalid.map((label) =>
+      validateClassificationOptions({ ...config, labels: [label, "receipt"] }),
+    );
+
+    expect(valid).toEqual([false, false, false, false, false]);
+  });
+
   test("rejects unsupported versions and duplicate, empty or excessive candidates", () => {
     const inputs = [
       { ...config, classifierVersion: "latest" },

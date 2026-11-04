@@ -61,8 +61,10 @@ The fixed model is `Xenova/clip-vit-base-patch32` revision
 `6b7c523703ae26e39be4b03774966f8571c7f523` (MIT), Transformers.js 3.8.1, CPU/q8,
 with prompt `This is a photo of {}`. Changing this profile requires a new classifier version.
 Only static JPEG/PNG/WebP previews up to 8 MiB / 1,048,576 pixels are accepted.
-One inference runs per process; busy requests receive 429. Cancellation discards results without
-freeing the slot before native inference finishes. There is no model, original or cloud fallback.
+One inference runs per process; busy requests receive 429. Cancellation while waiting for model
+loading releases the request slot immediately; the shared load continues and is reused by the next
+request. Once native inference starts, cancellation discards results without freeing its slot before
+inference finishes. There is no model, original or cloud fallback.
 
 The model is downloaded on first use and remains in memory. `M4K_MODEL_CACHE` selects the persistent
 model-cache directory (default `${M4K_TMP_DIR:-/tmp/m4k}/models`); ensure the service user can write it.

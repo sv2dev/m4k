@@ -58,6 +58,56 @@ describe("classifyImage client", () => {
     expect(result.labels.map((entry) => entry.label)).toEqual(labels);
   });
 
+  test("rejects candidate scores that do not sum to one", async () => {
+    const sha256 = new Bun.CryptoHasher("sha256").update("preview").digest("hex");
+    const server = Bun.serve({
+      port: 0,
+      fetch(request) {
+        return request.method === "GET"
+          ? Response.json({ service: "m4k", classifiers: [imageClassifier] })
+          : Response.json({
+              classifierId: imageClassifier.id,
+              classifierVersion: imageClassifier.version,
+              sha256,
+              labels: options.labels.map((label) => ({ label, score: 0.9 })),
+            });
+      },
+    });
+
+    const error = await classifyImage(server.url.origin, new Blob(["preview"]), options)
+      .then(
+        () => null,
+        (error: unknown) => error,
+      )
+      .finally(() => server.stop(true));
+
+    expect(error).toMatchObject({ message: "Invalid classification response" });
+  });
+
+  test("accepts normalization differences within floating-point tolerance", async () => {
+    const sha256 = new Bun.CryptoHasher("sha256").update("preview").digest("hex");
+    const server = Bun.serve({
+      port: 0,
+      fetch(request) {
+        return request.method === "GET"
+          ? Response.json({ service: "m4k", classifiers: [imageClassifier] })
+          : Response.json({
+              classifierId: imageClassifier.id,
+              classifierVersion: imageClassifier.version,
+              sha256,
+              labels: options.labels.map((label) => ({ label, score: 0.50000003 })),
+            });
+      },
+    });
+
+    const result = await classifyImage(server.url.origin, new Blob(["preview"]), options).finally(
+      () => server.stop(true),
+    );
+
+    expect(result.labels).toHaveLength(2);
+    expect(result.sha256).toBe(sha256);
+  });
+
   test("rejects labels returned for different uploaded bytes", async () => {
     const server = Bun.serve({
       port: 0,
