@@ -35,14 +35,14 @@
     },
     "packages/core": {
       "name": "m4k",
-      "version": "0.3.6",
+      "version": "0.3.7",
       "dependencies": {
+        "@ffmpeg-installer/ffmpeg": "^1.1.0",
         "@huggingface/transformers": "3.8.1",
         "@m4k/common": "workspace:^",
+        "tasque": "^0.1.2",
       },
       "devDependencies": {
-        "@ffmpeg-installer/ffmpeg": "^1.1.0",
-        "tasque": "^0.1.2",
         "typescript": "^7.0.2",
       },
       "peerDependencies": {

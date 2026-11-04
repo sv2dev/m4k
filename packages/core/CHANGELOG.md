@@ -5,6 +5,12 @@ All notable changes to `m4k` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.7]
+
+### Fixed
+
+- Declared `tasque` and `@ffmpeg-installer/ffmpeg` as runtime dependencies so production-only consumers can import and use the published package without workspace development dependencies.
+
 ## [0.3.6]
 
 ### Added
