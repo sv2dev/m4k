@@ -5,6 +5,17 @@ All notable changes to `m4k` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.6]
+
+### Added
+
+- Added pinned CPU/q8 CLIP classification with user-defined candidates and input SHA-256 results.
+- Added bounded TIFF IFD1 JPEG extraction without RAW development or original fallback.
+
+### Fixed
+
+- Released cancelled model-load waiters while reusing the shared load and retaining the slot during native inference.
+
 ## [0.3.5]
 
 ### Changed
