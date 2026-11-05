@@ -11,6 +11,37 @@ import { waitForLoad } from "../util/wait-for-load.js";
 
 let classifier: Promise<Awaited<ReturnType<typeof loadClassifier>>> | undefined;
 let busy = false;
+/** Callers that chose to wait for the inference slot, in arrival order. */
+const waiting: (() => void)[] = [];
+
+/** Takes the single inference slot, or throws when it is taken and the caller does not wait. */
+async function acquire(wait: boolean, signal?: AbortSignal) {
+  signal?.throwIfAborted();
+  if (!busy) {
+    busy = true;
+    return;
+  }
+  if (!wait) throw new Error("Classifier is busy");
+  await new Promise<void>((resolve, reject) => {
+    const turn = () => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    };
+    const onAbort = () => {
+      waiting.splice(waiting.indexOf(turn), 1);
+      reject(signal!.reason);
+    };
+    waiting.push(turn);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+/** Hands the slot to the next waiter, which keeps `busy` set, or frees it. */
+function release() {
+  const next = waiting.shift();
+  if (next) next();
+  else busy = false;
+}
 async function loadClassifier() {
   const { env, pipeline } = await import("@huggingface/transformers");
   env.cacheDir = process.env.M4K_MODEL_CACHE ?? `${process.env.M4K_TMP_DIR ?? "/tmp/m4k"}/models`;
@@ -38,19 +69,21 @@ async function decodePreview(input: Uint8Array) {
   }
 }
 
-/** Bounded preview-only inference. No arbitrary models, remote image URLs or file outputs. */
+/**
+ * Bounded preview-only inference. No arbitrary models, remote image URLs or file outputs.
+ * One inference runs at a time: a second caller fails with "Classifier is busy", unless it passes
+ * `wait` to queue for its turn (used by `processImage`, whose conversion has already been paid for).
+ */
 export async function classifyImage(
   input: Uint8Array,
   options: ClassificationOptions,
-  { signal }: { signal?: AbortSignal } = {},
+  { signal, wait = false }: { signal?: AbortSignal; wait?: boolean } = {},
 ): Promise<ClassificationResult> {
   if (!validateClassificationOptions(options))
     throw new RangeError("Unsupported classifier configuration");
   if (input.byteLength > imageClassifier.maxBytes)
     throw new RangeError("Classification preview exceeds byte limit");
-  signal?.throwIfAborted();
-  if (busy) throw new Error("Classifier is busy");
-  busy = true;
+  await acquire(wait, signal);
   try {
     const bytes = Uint8Array.from(input);
     const candidates = [...options.labels];
@@ -79,6 +112,6 @@ export async function classifyImage(
       labels: labels as ClassificationResult["labels"],
     };
   } finally {
-    busy = false;
+    release();
   }
 }

@@ -3,6 +3,7 @@ import { streamParts } from "@sv2dev/multipart-stream";
 import { describe, expect, it } from "bun:test";
 import sharp from "sharp";
 import { embeddedPreviewFixture } from "../../../../fixtures/embedded-preview.js";
+import { runClassificationScenario } from "../../../../fixtures/run-classification-scenario.js";
 import { processImageHandler } from "./process-image-handler";
 
 const fixture = Bun.file("../../fixtures/image.jpeg");
@@ -272,3 +273,56 @@ async function collectResponse(response: Response) {
   }
   return collected;
 }
+
+describe("/process with classification", () => {
+  const classify = {
+    classifierId: "clip-image-labels",
+    classifierVersion: "1",
+    labels: ["landscape", "receipt"],
+  };
+  const post = (options: unknown) =>
+    processImageHandler(
+      new Request("http://m4k/images/process", {
+        method: "POST",
+        body: fixture,
+        headers: { "X-Options": JSON.stringify(options) },
+      }),
+    );
+
+  it("rejects classification of an output the classifier cannot read", async () => {
+    const options = { format: "avif", classify };
+
+    const response = await post(options);
+
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain("jpeg, png or webp");
+  });
+
+  it("rejects discarding without classification", async () => {
+    const options = { format: "jpeg", discard: true };
+
+    const response = await post(options);
+
+    expect(response.status).toBe(400);
+  });
+
+  it("rejects an unsupported classifier before reading the input", async () => {
+    const options = { format: "jpeg", classify: { ...classify, labels: ["only-one"] } };
+
+    const response = await post(options);
+
+    expect(response.status).toBe(400);
+  });
+
+  it("streams the classification and maps later files onto their own names after a discard", async () => {
+    const scenario = "handler-process";
+
+    const result = await runClassificationScenario(scenario);
+
+    expect(result.status).toBe(200);
+    expect(result.body).toContain('"classification":{"index":0');
+    expect(result.body).toContain('filename="keep.webp"');
+    expect(result.body).not.toContain("file1.jpeg");
+    expect(result.inferences).toBe(1);
+  });
+});

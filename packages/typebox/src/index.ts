@@ -30,6 +30,14 @@ const imageFormat = T.Union([
   T.Literal("jp2"),
 ]);
 export const imageOptionsSchema = T.Object({
+  classify: T.Optional(
+    T.Object({
+      classifierId: T.String(),
+      classifierVersion: T.String(),
+      labels: T.Array(T.String()),
+    }),
+  ),
+  discard: T.Optional(T.Boolean()),
   embeddedPreview: T.Optional(T.Boolean()),
   rotate: T.Optional(T.Number()),
   resize: T.Optional(

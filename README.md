@@ -83,6 +83,42 @@ in this mode. Callers must require `embedded-preview/1` before uploading to avoi
 silently ignoring the option. No broad camera-format or physical-device compatibility is claimed;
 extractor tests use synthetic TIFF/DNG containers.
 
+#### Classifying while converting
+
+`POST /images/process` accepts an optional `classify` property on each image option. As soon as
+that entry's output has been produced, the server classifies exactly those output bytes and streams
+the result as an `application/json` part, so a RAW file is uploaded once and the converted preview
+never travels back and forth. Add `discard: true` to receive only the classification.
+
+```ts
+import { processImage, ProcessedFile } from "@m4k/client";
+
+for await (const event of processImage("http://localhost:3000", Bun.file("IMG_0001.DNG"), [
+  {
+    embeddedPreview: true,
+    format: "jpeg",
+    resize: { width: 512, height: 512 },
+    classify: { classifierId: "clip-image-labels", classifierVersion: "1", labels: ["landscape", "receipt"] },
+    discard: true,
+  },
+  { embeddedPreview: true, format: "jpeg", resize: { width: 2048, height: 2048 }, name: "web.jpg" },
+])) {
+  if (event instanceof ProcessedFile) await Array.fromAsync(event.stream);
+  else if ("classification" in event) console.log(event.classification.index, event.classification.labels);
+}
+```
+
+The part is `{"classification": {"index": 0, "classifierId", "classifierVersion", "sha256", "labels"}}`;
+`index` is the position of the producing entry in the options array, `sha256` is the hash of the
+classified output. Every classified entry needs an explicit `jpeg`, `png` or `webp` format within
+the classifier limits (8 MiB / 1,048,576 pixels), which is why a resize is usually appropriate.
+Several entries (and their classifications) share one upload and one decode. Unlike the standalone
+endpoint, a classification queues for the single inference slot instead of failing with 429, because
+the conversion has already been done. There is no fallback: a failing classification ends the stream
+with an error. Servers advertise `inline-classification/1` in `imageProfiles`; the client requires it
+(and the pinned classifier) before uploading and fails if the server omits a requested classification.
+`classify` is only available as JSON options (`X-Options` or `options`), not as a flat query parameter.
+
 ### Using the client
 
 The client is available as a standalone package [@m4k/client](./packages/client). You can use it to connect to the m4k server.
