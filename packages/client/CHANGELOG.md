@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `processImage` accepts `classify`/`discard`, requires the `inline-classification/1` profile, validates every classification part and fails when one is missing.
 
+### Fixed
+
+- Reject redirected classification uploads and bound streamed JSON control parts to 64 KiB before parsing.
+
 ## [0.2.12]
 
 ### Added

@@ -308,10 +308,28 @@ describe("/process with classification", () => {
 
   it("rejects an unsupported classifier before reading the input", async () => {
     const options = { format: "jpeg", classify: { ...classify, labels: ["only-one"] } };
+    let pulls = 0;
+    const body = new ReadableStream<Uint8Array>(
+      {
+        pull(controller) {
+          pulls++;
+          controller.enqueue(new Uint8Array([1]));
+          controller.close();
+        },
+      },
+      { highWaterMark: 0 },
+    );
+    const request = new Request("http://m4k/images/process", {
+      method: "POST",
+      body,
+      headers: { "X-Options": JSON.stringify(options) },
+    });
 
-    const response = await post(options);
+    const response = await processImageHandler(request);
 
     expect(response.status).toBe(400);
+    expect(request.bodyUsed).toBe(false);
+    expect(pulls).toBe(0);
   });
 
   it("streams the classification and maps later files onto their own names after a discard", async () => {

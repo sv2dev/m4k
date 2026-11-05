@@ -102,7 +102,13 @@ describe("processImage() with classification", () => {
   });
 
   test("rejects a classification for candidates that were not requested", async () => {
-    const forged = { ...result(0), labels: [{ label: "dog", score: 1 }] };
+    const forged = {
+      ...result(0),
+      labels: [
+        { label: "dog", score: 0.75 },
+        { label: "receipt", score: 0.25 },
+      ],
+    };
     const server = fakeServer({ parts: [{ json: { classification: forged } }] });
 
     const error = await run(server.url.origin, { format: "jpeg", classify, discard: true }).then(
@@ -127,6 +133,75 @@ describe("processImage() with classification", () => {
     server.stop(true);
 
     expect(String(error)).toContain("Invalid classification response");
+  });
+
+  test("bounds inline JSON before parsing an oversized classification", async () => {
+    const server = fakeServer({
+      parts: [{ json: { classification: { ...result(0), padding: "x".repeat(65536) } } }],
+    });
+
+    const error = await run(server.url.origin, { format: "jpeg", classify, discard: true })
+      .catch((error: unknown) => error)
+      .finally(() => server.stop(true));
+
+    expect(String(error)).toContain("exceeds 64 KiB");
+  });
+
+  for (const status of [307, 308]) {
+    test(`refuses a ${status} redirect without forwarding classification bytes or options`, async () => {
+      let forwarded = 0;
+      const target = Bun.serve({
+        port: 0,
+        fetch() {
+          forwarded++;
+          return new Response("unexpected");
+        },
+      });
+      const server = Bun.serve({
+        port: 0,
+        fetch(request) {
+          if (request.method === "GET")
+            return Response.json({
+              service: "m4k",
+              classifiers: [imageClassifier],
+              imageProfiles: [inlineClassificationProfile],
+            });
+          return Response.redirect(target.url, status);
+        },
+      });
+
+      const error = await run(server.url.origin, { format: "jpeg", classify })
+        .then(
+          () => null,
+          (error: unknown) => error,
+        )
+        .finally(() => {
+          server.stop(true);
+          target.stop(true);
+        });
+
+      expect(error).toBeInstanceOf(Error);
+      expect(forwarded).toBe(0);
+    });
+  }
+
+  test("preserves redirects for ordinary conversions without a pinned profile", async () => {
+    const posts = { count: 0 };
+    const target = fakeServer({ parts: ["converted.jpeg"], posts });
+    const server = Bun.serve({
+      port: 0,
+      fetch() {
+        return Response.redirect(target.url, 307);
+      },
+    });
+
+    const events = await run(server.url.origin, { format: "jpeg" }).finally(() => {
+      server.stop(true);
+      target.stop(true);
+    });
+
+    expect(events).toEqual(["file:converted.jpeg"]);
+    expect(posts.count).toBe(1);
   });
 
   test("refuses an avif output before contacting the server", async () => {

@@ -7,13 +7,30 @@ const loadStarted = Promise.withResolvers<void>();
 const pendingLoad = Promise.withResolvers<typeof infer>();
 const inferenceStarted = Promise.withResolvers<void>();
 const pendingInference = Promise.withResolvers<void>();
+const waiterEntered = Promise.withResolvers<void>();
+if (["process-wait", "queue-snapshot"].includes(scenario)) {
+  const { acquireInferenceSlot, releaseInferenceSlot } =
+    await import("../packages/core/src/images/inference-slot.ts");
+  let admissions = 0;
+  mock.module("../packages/core/src/images/inference-slot.ts", () => ({
+    acquireInferenceSlot: (wait: boolean, signal?: AbortSignal) => {
+      const admitted = acquireInferenceSlot(wait, signal);
+      if (++admissions === 2) waiterEntered.resolve();
+      return admitted;
+    },
+    releaseInferenceSlot,
+  }));
+}
 let loads = 0;
 let inferences = 0;
 let pixels: object | undefined;
 
 async function infer(_image: unknown, labels: string[]) {
   inferences++;
-  if (["inference-abort", "process-wait"].includes(scenario) && inferences === 1) {
+  if (
+    ["inference-abort", "process-wait", "queue-snapshot"].includes(scenario) &&
+    inferences === 1
+  ) {
     inferenceStarted.resolve();
     await pendingInference.promise;
   }
@@ -97,20 +114,43 @@ if (scenario === "process-inline" || scenario === "process-discard") {
 } else if (scenario === "process-wait") {
   const { processImage } = await import("../packages/core/src/images/image-processor.ts");
   const run = () =>
-    collect(processImage(new Blob([bytes], { type: "image/jpeg" }), { format: "jpeg", classify: options })!).then(
+    collect(
+      processImage(new Blob([bytes], { type: "image/jpeg" }), {
+        format: "jpeg",
+        classify: options,
+      })!,
+    ).then(
       (events) => ({ events }),
       (error: Error) => ({ error: error.message }),
     );
   const first = run();
   await inferenceStarted.promise;
   const second = run();
-  // Let the second conversion finish and reach the occupied inference slot.
-  await Bun.sleep(300);
+  // The real slot has synchronously admitted the second request behind active inference.
+  await waiterEntered.promise;
   const inferencesWhileWaiting = inferences;
   pendingInference.resolve();
   console.log(
-    JSON.stringify({ first: await first, second: await second, inferencesWhileWaiting, inferences }),
+    JSON.stringify({
+      first: await first,
+      second: await second,
+      inferencesWhileWaiting,
+      inferences,
+    }),
   );
+} else if (scenario === "queue-snapshot") {
+  const { classifyImage } = await import("../packages/core/src/images/classify-image.ts");
+  const first = classifyImage(bytes, options);
+  await inferenceStarted.promise;
+  const input = Uint8Array.from(bytes);
+  const requested = { ...options, labels: [...options.labels] };
+  const second = classifyImage(input, requested, { wait: true });
+  await waiterEntered.promise;
+  input.fill(0);
+  requested.labels.splice(0, requested.labels.length, "changed");
+  pendingInference.resolve();
+  await first;
+  console.log(JSON.stringify({ result: await second, expectedSha256, inferences }));
 } else if (scenario === "handler-success") {
   const { classifyImageHandler } =
     await import("../packages/server/src/images/classify-image-handler.ts");

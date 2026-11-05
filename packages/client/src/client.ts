@@ -14,7 +14,7 @@ import {
   type RemoteImageOptions,
   type RemoteVideoOptions,
 } from "@m4k/common";
-import { readJsonResponse } from "./read-json-response.js";
+import { readJsonParts, readJsonResponse } from "./read-json-response.js";
 import { iterableToStream, streamParts } from "@sv2dev/multipart-stream";
 
 /**
@@ -121,6 +121,7 @@ export async function* processVideo(
   yield* runFetch(`${host}/videos/process`, input, opts, { signal });
 }
 
+/** Stream conversion results, rejecting redirects for pinned profiles and bounding JSON parts. */
 async function* runFetch(
   url: string,
   input: AsyncIterable<Uint8Array> | Blob,
@@ -128,12 +129,12 @@ async function* runFetch(
   { signal }: { signal?: AbortSignal } = {},
 ) {
   signal?.throwIfAborted();
-  const preview = (Array.isArray(opts) ? opts : [opts]).some(
-    (option) => option.embeddedPreview === true,
+  const pinned = (Array.isArray(opts) ? opts : [opts]).some(
+    (option) => option.embeddedPreview === true || !!option.classify,
   );
   const res = await fetch(
     new Request(url, {
-      redirect: preview ? "error" : "follow",
+      redirect: pinned ? "error" : "follow",
       method: "POST",
       body: inputToStream(input),
       headers: { "X-Options": encodeOptions(opts) },
@@ -148,7 +149,7 @@ async function* runFetch(
   // Audio and video entries have no `classify`; this only guards image requests.
   for await (const part of streamParts(res)) {
     if (part.type === "application/json") {
-      const msg = (await part.json()) as
+      const msg = (await readJsonParts(part)) as
         | Progress
         | QueuePosition
         | ProcessingError

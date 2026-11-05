@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `processImage` classifies an entry's output right after conversion (`classify`, `discard`) and yields an `InlineClassification`; the inference slot can be awaited with `classifyImage(..., { wait: true })`.
 
+### Fixed
+
+- Bound inference admission to eight waiting callers, support cancellation without losing the slot, and snapshot validated bytes/candidates before awaiting inference.
+
 ## [0.3.7]
 
 ### Fixed

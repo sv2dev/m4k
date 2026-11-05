@@ -107,7 +107,11 @@ export const imageQueue = createQueue({
 
 type OutputFile = { name: string; type: string; bytes: Buffer };
 
-async function runSharp(input: string | Buffer | Blob, opts: ImageOptions[]): Promise<OutputFile[]> {
+/** Convert sibling outputs and retain their exact encoded bytes for optional classification. */
+async function runSharp(
+  input: string | Buffer | Blob,
+  opts: ImageOptions[],
+): Promise<OutputFile[]> {
   const sharpInstance = sharp();
   void exhaustAsyncIterableToWritable(toSharpInput(input), sharpInstance);
   return Promise.all(

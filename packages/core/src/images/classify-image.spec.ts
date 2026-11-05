@@ -68,6 +68,19 @@ describe("classifyImage lifecycle", () => {
     expect(result.events.filter((event: object) => "classification" in event)).toHaveLength(1);
   });
 
+  test("snapshots validated bytes and candidates before waiting for inference", async () => {
+    const scenario = "queue-snapshot";
+
+    const result = await runClassificationScenario(scenario);
+
+    expect(result.result.sha256).toBe(result.expectedSha256);
+    expect(result.result.labels.map((entry: { label: string }) => entry.label)).toEqual([
+      "landscape",
+      "receipt",
+    ]);
+    expect(result.inferences).toBe(2);
+  });
+
   test("queues a second conversion for the inference slot instead of failing busy", async () => {
     const scenario = "process-wait";
 

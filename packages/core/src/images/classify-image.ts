@@ -8,40 +8,9 @@ import {
 } from "@m4k/common";
 
 import { waitForLoad } from "../util/wait-for-load.js";
+import { acquireInferenceSlot, releaseInferenceSlot } from "./inference-slot.js";
 
 let classifier: Promise<Awaited<ReturnType<typeof loadClassifier>>> | undefined;
-let busy = false;
-/** Callers that chose to wait for the inference slot, in arrival order. */
-const waiting: (() => void)[] = [];
-
-/** Takes the single inference slot, or throws when it is taken and the caller does not wait. */
-async function acquire(wait: boolean, signal?: AbortSignal) {
-  signal?.throwIfAborted();
-  if (!busy) {
-    busy = true;
-    return;
-  }
-  if (!wait) throw new Error("Classifier is busy");
-  await new Promise<void>((resolve, reject) => {
-    const turn = () => {
-      signal?.removeEventListener("abort", onAbort);
-      resolve();
-    };
-    const onAbort = () => {
-      waiting.splice(waiting.indexOf(turn), 1);
-      reject(signal!.reason);
-    };
-    waiting.push(turn);
-    signal?.addEventListener("abort", onAbort, { once: true });
-  });
-}
-
-/** Hands the slot to the next waiter, which keeps `busy` set, or frees it. */
-function release() {
-  const next = waiting.shift();
-  if (next) next();
-  else busy = false;
-}
 async function loadClassifier() {
   const { env, pipeline } = await import("@huggingface/transformers");
   env.cacheDir = process.env.M4K_MODEL_CACHE ?? `${process.env.M4K_TMP_DIR ?? "/tmp/m4k"}/models`;
@@ -83,10 +52,12 @@ export async function classifyImage(
     throw new RangeError("Unsupported classifier configuration");
   if (input.byteLength > imageClassifier.maxBytes)
     throw new RangeError("Classification preview exceeds byte limit");
-  await acquire(wait, signal);
+  const admitted = acquireInferenceSlot(wait, signal);
+  const bytes = Uint8Array.from(input);
+  const candidates = [...options.labels];
+  await admitted;
   try {
-    const bytes = Uint8Array.from(input);
-    const candidates = [...options.labels];
+    signal?.throwIfAborted();
     const { data, info } = await decodePreview(bytes);
     signal?.throwIfAborted();
     const { RawImage } = await import("@huggingface/transformers");
@@ -112,6 +83,6 @@ export async function classifyImage(
       labels: labels as ClassificationResult["labels"],
     };
   } finally {
-    release();
+    releaseInferenceSlot();
   }
 }

@@ -112,7 +112,9 @@ The part is `{"classification": {"index": 0, "classifierId", "classifierVersion"
 `index` is the position of the producing entry in the options array, `sha256` is the hash of the
 classified output. Every classified entry needs an explicit `jpeg`, `png` or `webp` format within
 the classifier limits (8 MiB / 1,048,576 pixels), which is why a resize is usually appropriate.
-Several entries (and their classifications) share one upload and one decode. Unlike the standalone
+Several entries share one upload; each classified entry separately decodes its converted output.
+Inline inference admits at most eight waiting callers; excess requests fail rather than retaining
+unbounded preview buffers. Unlike the standalone
 endpoint, a classification queues for the single inference slot instead of failing with 429, because
 the conversion has already been done. There is no fallback: a failing classification ends the stream
 with an error. Servers advertise `inline-classification/1` in `imageProfiles`; the client requires it
