@@ -5,6 +5,12 @@ All notable changes to `@m4k/server` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `POST /images/process` validates and streams inline classifications and advertises `inline-classification/1`.
+
 ## [0.2.13]
 
 ### Added

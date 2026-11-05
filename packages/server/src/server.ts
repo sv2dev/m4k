@@ -1,6 +1,6 @@
 import type { ServeOptions, Server } from "bun";
 import { version } from "../package.json";
-import { imageClassifier } from "@m4k/common";
+import { imageClassifier, inlineClassificationProfile } from "@m4k/common";
 import { classifyImageHandler } from "./images/classify-image-handler.js";
 import { processAudioHandler } from "./audio/process-audio-handler.js";
 import { processImageHandler } from "./images/process-image-handler.js";
@@ -32,7 +32,7 @@ const routes = {
         version,
         service: "m4k",
         classifiers: [imageClassifier],
-        imageProfiles: ["embedded-preview/1"],
+        imageProfiles: ["embedded-preview/1", inlineClassificationProfile],
       }),
   },
   POST: {

@@ -1,6 +1,7 @@
 import {
   imageClassifier,
   encodeOptions,
+  isValidClassificationResult,
   validateClassificationOptions,
   type ClassificationOptions,
   type ClassificationResult,
@@ -46,23 +47,7 @@ export async function classifyImage(
   });
   if (!response.ok) throw new Error(`M4K classification failed (${response.status})`);
   const result = (await readJsonResponse(response)) as ClassificationResult;
-  if (
-    result.classifierId !== options.classifierId ||
-    result.classifierVersion !== options.classifierVersion ||
-    !/^[a-f0-9]{64}$/.test(result.sha256) ||
-    !Array.isArray(result.labels) ||
-    result.labels.length !== options.labels.length ||
-    new Set(result.labels.map((entry) => entry.label)).size !== options.labels.length ||
-    result.labels.some(
-      (entry) =>
-        !options.labels.includes(entry.label) ||
-        !Number.isFinite(entry.score) ||
-        entry.score < 0 ||
-        entry.score > 1,
-    ) ||
-    Math.abs(result.labels.reduce((sum, entry) => sum + entry.score, 0) - 1) > 1e-3
-  )
-    throw new Error("Invalid classification response");
+  if (!isValidClassificationResult(result, options)) throw new Error("Invalid classification response");
   const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", await input.arrayBuffer()));
   const sha256 = [...hash].map((byte) => byte.toString(16).padStart(2, "0")).join("");
   if (result.sha256 !== sha256)

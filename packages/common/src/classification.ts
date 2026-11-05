@@ -52,3 +52,69 @@ export function validateClassificationOptions(value: unknown): value is Classifi
     )
   );
 }
+
+/** Profile advertised in `GET /info` `imageProfiles` by servers that classify inside `/images/process`. */
+export const inlineClassificationProfile = "inline-classification/1";
+
+/** Image formats the classifier accepts; an inline classification must produce one of them. */
+export const classifiableFormats = ["jpeg", "png", "webp"] as const;
+
+/** One classification streamed by `/images/process`: the result for the output at `index`. */
+export type InlineClassification = {
+  classification: ClassificationResult & {
+    /** Position of the producing entry in the request's options array. */
+    index: number;
+  };
+};
+
+/**
+ * Checks the classification-related fields of an image-options array before any work starts.
+ * Returns the problem, or `undefined` when the combination is acceptable.
+ */
+export function invalidInlineClassification(
+  options: readonly {
+    classify?: unknown;
+    discard?: boolean;
+    format?: string;
+    ext?: string;
+    output?: string;
+  }[],
+): string | undefined {
+  for (const [index, option] of options.entries()) {
+    const at = `[${index}] `;
+    if (option.classify === undefined) {
+      if (option.discard) return `${at}discard requires classify`;
+      continue;
+    }
+    if (!validateClassificationOptions(option.classify))
+      return `${at}Unsupported classifier configuration`;
+    const format = option.ext ?? option.format;
+    if (!(classifiableFormats as readonly (string | undefined)[]).includes(format))
+      return `${at}classify requires an explicit jpeg, png or webp output format`;
+    if (option.discard && option.output) return `${at}discard cannot be combined with output`;
+  }
+  return undefined;
+}
+
+/** Whether a result is well-formed for the requested candidates. The byte hash is checked by the caller. */
+export function isValidClassificationResult(
+  result: ClassificationResult,
+  options: ClassificationOptions,
+): boolean {
+  return (
+    result.classifierId === options.classifierId &&
+    result.classifierVersion === options.classifierVersion &&
+    /^[a-f0-9]{64}$/.test(result.sha256) &&
+    Array.isArray(result.labels) &&
+    result.labels.length === options.labels.length &&
+    new Set(result.labels.map((entry) => entry.label)).size === options.labels.length &&
+    result.labels.every(
+      (entry) =>
+        options.labels.includes(entry.label) &&
+        Number.isFinite(entry.score) &&
+        entry.score >= 0 &&
+        entry.score <= 1,
+    ) &&
+    Math.abs(result.labels.reduce((sum, entry) => sum + entry.score, 0) - 1) <= 1e-3
+  );
+}

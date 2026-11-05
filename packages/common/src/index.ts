@@ -1,9 +1,15 @@
+import type { ClassificationOptions } from "./classification.js";
 export {
+  classifiableFormats,
   imageClassifier,
+  inlineClassificationProfile,
   encodeOptions,
+  invalidInlineClassification,
+  isValidClassificationResult,
   validateClassificationOptions,
   type ClassificationOptions,
   type ClassificationResult,
+  type InlineClassification,
 } from "./classification.js";
 
 export type Progress = {
@@ -34,6 +40,14 @@ type ImageFormat =
   | "jp2";
 
 export type ImageOptions = {
+  /**
+   * Classify this entry's output as soon as it has been produced, on the same server. The result
+   * is streamed as an `InlineClassification` part; the output bytes are classified exactly as
+   * returned. Requires an explicit `jpeg`, `png` or `webp` format within the classifier's limits.
+   */
+  classify?: ClassificationOptions;
+  /** Return only the classification, not the converted file. Requires `classify`. */
+  discard?: boolean;
   /** Extract a bounded embedded JPEG preview from a TIFF-based camera file; never demosaic RAW. */
   embeddedPreview?: boolean;
   /** The rotation of the image. If not provided, the image will be auto-rotated, according to the EXIF data. To disable auto-rotation, set to `0`. */
@@ -172,6 +186,7 @@ export function isImageNoOp(opt: ImageOptions, inputExt: string): boolean {
   if (outFmt !== inputExt) return false;
   return (
     !opt.embeddedPreview &&
+    !opt.classify &&
     !opt.resize &&
     !opt.crop &&
     opt.rotate == null &&

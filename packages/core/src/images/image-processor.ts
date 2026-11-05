@@ -1,4 +1,10 @@
-import { type ImageOptions, ProcessedFile, isImageNoOp } from "@m4k/common";
+import {
+  type ImageOptions,
+  type InlineClassification,
+  ProcessedFile,
+  invalidInlineClassification,
+  isImageNoOp,
+} from "@m4k/common";
 import { spawn } from "node:child_process";
 import { createReadStream } from "node:fs";
 import { readFile, rm } from "node:fs/promises";
@@ -7,6 +13,7 @@ import { createQueue } from "tasque";
 import { ffmpeg, createTmp, randomId } from "../util/ffmpeg-processor.js";
 import { exhaustAsyncIterableToWritable } from "../util/streams.js";
 
+import { classifyImage } from "./classify-image.js";
 import { extractEmbeddedPreview } from "./extract-embedded-preview.js";
 
 export { ffmpeg };
@@ -21,7 +28,8 @@ const imageTmpDir = `${process.env.M4K_TMP_DIR ?? "/tmp/m4k"}/image`;
  * @param input - The input image. Can be a file path, a stream or a blob.
  * @param opts - The options for the image processing.
  * @param signal - An optional abort signal.
- * @returns An iterable of the processed images.
+ * @returns An iterable of the processed images. An entry with `classify` is followed by an
+ * `InlineClassification` of exactly its output bytes; the file itself is omitted if `discard` is set.
  */
 export function processImage(
   input: string | AsyncIterable<Uint8Array> | Blob,
@@ -30,6 +38,8 @@ export function processImage(
 ) {
   const iterable = imageQueue.iterate(async function* () {
     const optsArr = Array.isArray(opts) ? opts : [opts];
+    const invalid = invalidInlineClassification(optsArr);
+    if (invalid) throw new RangeError(invalid);
     const preview = optsArr.some((o) => o.embeddedPreview);
     if (
       preview &&
@@ -54,7 +64,7 @@ export function processImage(
       return;
     }
 
-    let files: ProcessedFile[];
+    let files: OutputFile[];
     try {
       files = await runSharp(resolvedInput, optsArr);
     } catch {
@@ -64,7 +74,17 @@ export function processImage(
 
     yield { progress: 0 };
     for (let i = 0; i < files.length; i++) {
-      yield files[i];
+      const { name, type, bytes } = files[i];
+      const { classify, discard } = optsArr[i];
+      if (!discard) yield new ProcessedFile(name, type, toAsyncIterable(bytes));
+      if (classify) {
+        // Queues for the single inference slot: the conversion above is not repeated when busy.
+        const result = await classifyImage(bytes, classify, {
+          ...(signal ? { signal } : {}),
+          wait: true,
+        });
+        yield { classification: { index: i, ...result } } satisfies InlineClassification;
+      }
       yield { progress: Math.round(((i + 1) / files.length) * 100) };
     }
   }, signal);
@@ -85,10 +105,13 @@ export const imageQueue = createQueue({
   max: Number(process.env.IMAGE_QUEUE_SIZE ?? 100),
 });
 
+type OutputFile = { name: string; type: string; bytes: Buffer };
+
+/** Convert sibling outputs and retain their exact encoded bytes for optional classification. */
 async function runSharp(
   input: string | Buffer | Blob,
   opts: ImageOptions[],
-): Promise<ProcessedFile[]> {
+): Promise<OutputFile[]> {
   const sharpInstance = sharp();
   void exhaustAsyncIterableToWritable(toSharpInput(input), sharpInstance);
   return Promise.all(
@@ -127,8 +150,7 @@ async function runSharp(
           });
         }
         s = s.toFormat(ext, { quality });
-        const buf = await s.toBuffer();
-        return new ProcessedFile(`file${idx + 1}.${ext}`, `image/${ext}`, toAsyncIterable(buf));
+        return { name: `file${idx + 1}.${ext}`, type: `image/${ext}`, bytes: await s.toBuffer() };
       },
     ),
   );

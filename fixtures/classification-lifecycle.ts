@@ -7,13 +7,30 @@ const loadStarted = Promise.withResolvers<void>();
 const pendingLoad = Promise.withResolvers<typeof infer>();
 const inferenceStarted = Promise.withResolvers<void>();
 const pendingInference = Promise.withResolvers<void>();
+const waiterEntered = Promise.withResolvers<void>();
+if (["process-wait", "queue-snapshot"].includes(scenario)) {
+  const { acquireInferenceSlot, releaseInferenceSlot } =
+    await import("../packages/core/src/images/inference-slot.ts");
+  let admissions = 0;
+  mock.module("../packages/core/src/images/inference-slot.ts", () => ({
+    acquireInferenceSlot: (wait: boolean, signal?: AbortSignal) => {
+      const admitted = acquireInferenceSlot(wait, signal);
+      if (++admissions === 2) waiterEntered.resolve();
+      return admitted;
+    },
+    releaseInferenceSlot,
+  }));
+}
 let loads = 0;
 let inferences = 0;
 let pixels: object | undefined;
 
 async function infer(_image: unknown, labels: string[]) {
   inferences++;
-  if (scenario === "inference-abort" && inferences === 1) {
+  if (
+    ["inference-abort", "process-wait", "queue-snapshot"].includes(scenario) &&
+    inferences === 1
+  ) {
     inferenceStarted.resolve();
     await pendingInference.promise;
   }
@@ -47,7 +64,94 @@ const options = {
 };
 const expectedSha256 = new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
 
-if (scenario === "handler-success") {
+/** Drains `processImage` (or the server handler's parts) into plain, comparable events. */
+async function collect(events: AsyncIterable<unknown>) {
+  const out: unknown[] = [];
+  for await (const event of events) {
+    if (typeof event === "object" && event !== null && "stream" in event && "name" in event) {
+      const chunks: Uint8Array[] = [];
+      for await (const chunk of event.stream as AsyncIterable<Uint8Array>) chunks.push(chunk);
+      const data = Buffer.concat(chunks);
+      out.push({
+        file: event.name as string,
+        sha256: new Bun.CryptoHasher("sha256").update(data).digest("hex"),
+      });
+    } else out.push(event);
+  }
+  return out;
+}
+
+if (scenario === "process-inline" || scenario === "process-discard") {
+  const { processImage } = await import("../packages/core/src/images/image-processor.ts");
+  const events = await collect(
+    processImage(new Blob([bytes], { type: "image/jpeg" }), [
+      {
+        format: "jpeg",
+        resize: { width: 16 },
+        classify: options,
+        ...(scenario === "process-discard" ? { discard: true } : {}),
+      },
+      { format: "webp" },
+    ])!,
+  );
+  console.log(JSON.stringify({ events, loads, inferences, pixels, expectedSha256 }));
+} else if (scenario === "handler-process") {
+  const { processImageHandler } =
+    await import("../packages/server/src/images/process-image-handler.ts");
+  const response = await processImageHandler(
+    new Request("http://m4k/images/process", {
+      method: "POST",
+      body: bytes,
+      headers: {
+        "X-Options": JSON.stringify([
+          { format: "jpeg", resize: { width: 16 }, classify: options, discard: true },
+          { format: "webp", name: "keep.webp" },
+        ]),
+      },
+    }),
+  );
+  console.log(JSON.stringify({ status: response.status, body: await response.text(), inferences }));
+} else if (scenario === "process-wait") {
+  const { processImage } = await import("../packages/core/src/images/image-processor.ts");
+  const run = () =>
+    collect(
+      processImage(new Blob([bytes], { type: "image/jpeg" }), {
+        format: "jpeg",
+        classify: options,
+      })!,
+    ).then(
+      (events) => ({ events }),
+      (error: Error) => ({ error: error.message }),
+    );
+  const first = run();
+  await inferenceStarted.promise;
+  const second = run();
+  // The real slot has synchronously admitted the second request behind active inference.
+  await waiterEntered.promise;
+  const inferencesWhileWaiting = inferences;
+  pendingInference.resolve();
+  console.log(
+    JSON.stringify({
+      first: await first,
+      second: await second,
+      inferencesWhileWaiting,
+      inferences,
+    }),
+  );
+} else if (scenario === "queue-snapshot") {
+  const { classifyImage } = await import("../packages/core/src/images/classify-image.ts");
+  const first = classifyImage(bytes, options);
+  await inferenceStarted.promise;
+  const input = Uint8Array.from(bytes);
+  const requested = { ...options, labels: [...options.labels] };
+  const second = classifyImage(input, requested, { wait: true });
+  await waiterEntered.promise;
+  input.fill(0);
+  requested.labels.splice(0, requested.labels.length, "changed");
+  pendingInference.resolve();
+  await first;
+  console.log(JSON.stringify({ result: await second, expectedSha256, inferences }));
+} else if (scenario === "handler-success") {
   const { classifyImageHandler } =
     await import("../packages/server/src/images/classify-image-handler.ts");
   const response = await classifyImageHandler(

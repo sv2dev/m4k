@@ -1,4 +1,4 @@
-import type { RemoteImageOptions } from "@m4k/common";
+import { invalidInlineClassification, type RemoteImageOptions } from "@m4k/common";
 import { imageOptionsSchema } from "@m4k/typebox";
 import { Type as T } from "@sinclair/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
@@ -19,6 +19,10 @@ export async function processImageHandler(request: Request) {
     return error(400, (err as RangeError).message);
   }
   if (optsArr.length === 0) return error(400, "No options provided");
+  const invalid = invalidInlineClassification(optsArr);
+  if (invalid) return error(400, invalid);
+  // Entries with `discard` produce no file part, so files map onto the remaining entries in order.
+  const emitting = optsArr.filter((opts) => !opts.discard);
 
   const iterable = processImage(request.body, optsArr, {
     signal: request.signal,
@@ -29,7 +33,7 @@ export async function processImageHandler(request: Request) {
       let idx = 0;
       for await (const value of iterable) {
         if (value instanceof ProcessedFile) {
-          const { output, name } = optsArr[idx];
+          const { output, name } = emitting[idx];
           if (output) {
             const out = Bun.file(output);
             const writer = out.writer();

@@ -8,9 +8,9 @@ import {
 } from "@m4k/common";
 
 import { waitForLoad } from "../util/wait-for-load.js";
+import { acquireInferenceSlot, releaseInferenceSlot } from "./inference-slot.js";
 
 let classifier: Promise<Awaited<ReturnType<typeof loadClassifier>>> | undefined;
-let busy = false;
 async function loadClassifier() {
   const { env, pipeline } = await import("@huggingface/transformers");
   env.cacheDir = process.env.M4K_MODEL_CACHE ?? `${process.env.M4K_TMP_DIR ?? "/tmp/m4k"}/models`;
@@ -38,22 +38,26 @@ async function decodePreview(input: Uint8Array) {
   }
 }
 
-/** Bounded preview-only inference. No arbitrary models, remote image URLs or file outputs. */
+/**
+ * Bounded preview-only inference. No arbitrary models, remote image URLs or file outputs.
+ * One inference runs at a time: a second caller fails with "Classifier is busy", unless it passes
+ * `wait` to queue for its turn (used by `processImage`, whose conversion has already been paid for).
+ */
 export async function classifyImage(
   input: Uint8Array,
   options: ClassificationOptions,
-  { signal }: { signal?: AbortSignal } = {},
+  { signal, wait = false }: { signal?: AbortSignal; wait?: boolean } = {},
 ): Promise<ClassificationResult> {
   if (!validateClassificationOptions(options))
     throw new RangeError("Unsupported classifier configuration");
   if (input.byteLength > imageClassifier.maxBytes)
     throw new RangeError("Classification preview exceeds byte limit");
-  signal?.throwIfAborted();
-  if (busy) throw new Error("Classifier is busy");
-  busy = true;
+  const admitted = acquireInferenceSlot(wait, signal);
+  const bytes = Uint8Array.from(input);
+  const candidates = [...options.labels];
+  await admitted;
   try {
-    const bytes = Uint8Array.from(input);
-    const candidates = [...options.labels];
+    signal?.throwIfAborted();
     const { data, info } = await decodePreview(bytes);
     signal?.throwIfAborted();
     const { RawImage } = await import("@huggingface/transformers");
@@ -79,6 +83,6 @@ export async function classifyImage(
       labels: labels as ClassificationResult["labels"],
     };
   } finally {
-    busy = false;
+    releaseInferenceSlot();
   }
 }

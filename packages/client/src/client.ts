@@ -1,7 +1,12 @@
 import {
   ProcessedFile,
+  imageClassifier,
+  inlineClassificationProfile,
+  invalidInlineClassification,
   isImageNoOp,
+  isValidClassificationResult,
   encodeOptions,
+  type InlineClassification,
   type ProcessingError,
   type Progress,
   type QueuePosition,
@@ -9,7 +14,7 @@ import {
   type RemoteImageOptions,
   type RemoteVideoOptions,
 } from "@m4k/common";
-import { readJsonResponse } from "./read-json-response.js";
+import { readJsonParts, readJsonResponse } from "./read-json-response.js";
 import { iterableToStream, streamParts } from "@sv2dev/multipart-stream";
 
 /**
@@ -31,6 +36,10 @@ export async function* processAudio(
 
 /**
  * Process an image.
+ *
+ * An entry with `classify` is classified on the server right after its output was produced, so
+ * the converted file never travels back for classification. Its `InlineClassification` is yielded
+ * after the file (or instead of it, with `discard`). The stream fails if the server omits one.
  * @param host - The host of the server.
  * @param input - The input image. Can be a stream or a blob.
  * @param opts - The options for the image processing.
@@ -44,22 +53,37 @@ export async function* processImage(
   { signal }: { signal?: AbortSignal } = {},
 ) {
   const optsArr = Array.isArray(opts) ? opts : [opts];
-  if (optsArr.some((option) => option.embeddedPreview)) {
+  const invalid = invalidInlineClassification(optsArr);
+  if (invalid) throw new RangeError(invalid);
+  const classifying = optsArr.some((option) => option.classify);
+  if (classifying || optsArr.some((option) => option.embeddedPreview)) {
     const response = await fetch(`${host}/info`, {
       ...(signal ? { signal } : {}),
       redirect: "error",
     });
-    if (!response.ok) throw new Error("M4K preview capability check failed");
+    if (!response.ok) throw new Error("M4K capability check failed");
     const info = (await readJsonResponse(response)) as {
       service?: string;
       imageProfiles?: string[];
+      classifiers?: { id: string; version: string; revision: string }[];
     };
-    if (
-      info.service !== "m4k" ||
-      !Array.isArray(info.imageProfiles) ||
-      !info.imageProfiles.includes("embedded-preview/1")
-    )
+    const profiles =
+      info.service === "m4k" && Array.isArray(info.imageProfiles) ? info.imageProfiles : [];
+    const preview = optsArr.some((option) => option.embeddedPreview);
+    if (preview && !profiles.includes("embedded-preview/1"))
       throw new RangeError("M4K does not support embedded preview extraction");
+    if (
+      classifying &&
+      (!profiles.includes(inlineClassificationProfile) ||
+        !Array.isArray(info.classifiers) ||
+        !info.classifiers.some(
+          (c) =>
+            c.id === imageClassifier.id &&
+            c.version === imageClassifier.version &&
+            c.revision === imageClassifier.revision,
+        ))
+    )
+      throw new RangeError("M4K does not support classification while processing images");
   }
   if (input instanceof Blob && input.type) {
     const inputExt = input.type.replace(/^image\//, "").toLowerCase();
@@ -97,6 +121,7 @@ export async function* processVideo(
   yield* runFetch(`${host}/videos/process`, input, opts, { signal });
 }
 
+/** Stream conversion results, rejecting redirects for pinned profiles and bounding JSON parts. */
 async function* runFetch(
   url: string,
   input: AsyncIterable<Uint8Array> | Blob,
@@ -104,12 +129,12 @@ async function* runFetch(
   { signal }: { signal?: AbortSignal } = {},
 ) {
   signal?.throwIfAborted();
-  const preview = (Array.isArray(opts) ? opts : [opts]).some(
-    (option) => option.embeddedPreview === true,
+  const pinned = (Array.isArray(opts) ? opts : [opts]).some(
+    (option) => option.embeddedPreview === true || !!option.classify,
   );
   const res = await fetch(
     new Request(url, {
-      redirect: preview ? "error" : "follow",
+      redirect: pinned ? "error" : "follow",
       method: "POST",
       body: inputToStream(input),
       headers: { "X-Options": encodeOptions(opts) },
@@ -119,12 +144,26 @@ async function* runFetch(
   if (!res.ok) {
     throw new Error(`Failed to optimize: [${res.statusText}] ${await res.text()}`);
   }
+  const requested = (Array.isArray(opts) ? opts : [opts]) as RemoteImageOptions[];
+  const awaiting = new Set(requested.flatMap((o, i) => ("classify" in o && o.classify ? [i] : [])));
+  // Audio and video entries have no `classify`; this only guards image requests.
   for await (const part of streamParts(res)) {
     if (part.type === "application/json") {
-      const msg = (await part.json()) as Progress | QueuePosition | ProcessingError;
+      const msg = (await readJsonParts(part)) as
+        | Progress
+        | QueuePosition
+        | ProcessingError
+        | InlineClassification;
       if ("error" in msg) {
         signal?.throwIfAborted();
         throw new Error(msg.error);
+      }
+      if ("classification" in msg) {
+        const { index } = msg.classification;
+        const asked = requested[index]?.classify;
+        const expected = awaiting.delete(index) && asked !== undefined;
+        if (!expected || !isValidClassificationResult(msg.classification, asked))
+          throw new Error("Invalid classification response");
       }
       yield msg;
     } else if (part.type !== "text/plain") {
@@ -133,6 +172,7 @@ async function* runFetch(
       };
     }
   }
+  if (awaiting.size > 0) throw new Error("M4K did not return every requested classification");
 }
 
 function inputToStream(input: AsyncIterable<Uint8Array> | Blob) {

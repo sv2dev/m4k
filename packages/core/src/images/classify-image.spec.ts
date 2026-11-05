@@ -38,4 +38,58 @@ describe("classifyImage lifecycle", () => {
     expect(result.inferences).toBe(2);
     expect(result.retry.sha256).toBe(result.expectedSha256);
   });
+
+  test("classifies the exact bytes of a converted output on the same call", async () => {
+    const scenario = "process-inline";
+
+    const result = await runClassificationScenario(scenario);
+
+    const events = result.events.filter((event: object) => !("position" in event));
+    const [start, file, classified, firstDone, second, done] = events;
+    expect(start).toEqual({ progress: 0 });
+    expect(file.file).toBe("file1.jpeg");
+    expect(classified.classification.index).toBe(0);
+    expect(classified.classification.sha256).toBe(file.sha256);
+    expect(classified.classification.sha256).not.toBe(result.expectedSha256);
+    expect(firstDone).toEqual({ progress: 50 });
+    expect(second.file).toBe("file2.webp");
+    expect(done).toEqual({ progress: 100 });
+    expect(result.inferences).toBe(1);
+    expect(result.pixels.width).toBe(16);
+  });
+
+  test("returns only the classification when the converted file is discarded", async () => {
+    const scenario = "process-discard";
+
+    const result = await runClassificationScenario(scenario);
+
+    const files = result.events.filter((event: object) => "file" in event);
+    expect(files.map((event: { file: string }) => event.file)).toEqual(["file2.webp"]);
+    expect(result.events.filter((event: object) => "classification" in event)).toHaveLength(1);
+  });
+
+  test("snapshots validated bytes and candidates before waiting for inference", async () => {
+    const scenario = "queue-snapshot";
+
+    const result = await runClassificationScenario(scenario);
+
+    expect(result.result.sha256).toBe(result.expectedSha256);
+    expect(result.result.labels.map((entry: { label: string }) => entry.label)).toEqual([
+      "landscape",
+      "receipt",
+    ]);
+    expect(result.inferences).toBe(2);
+  });
+
+  test("queues a second conversion for the inference slot instead of failing busy", async () => {
+    const scenario = "process-wait";
+
+    const result = await runClassificationScenario(scenario);
+
+    expect(result.inferencesWhileWaiting).toBe(1);
+    expect(result.inferences).toBe(2);
+    expect(result.first.error).toBeUndefined();
+    expect(result.second.error).toBeUndefined();
+    expect(result.second.events.some((event: object) => "classification" in event)).toBe(true);
+  });
 });
